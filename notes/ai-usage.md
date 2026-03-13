@@ -17,3 +17,4 @@ This document describes how AI tooling was used during the development.
 | 2026-03-13 | Update design.md to reflect backend-owned conversation history with chatId adapter pattern | Updated sections 1–6, 9–12 in `notes/design.md` |
 | 2026-03-13 | Step-by-step implementation plan for Turborepo monorepo (NextJS + NestJS, ESLint, Prettier) | `notes/implementation.md` — 25-step plan across 5 phases |
 | 2026-03-13 | Reorder implementation phases: Hello World scaffolds for chat-service then chat-app before full implementation | Updated `notes/implementation.md` — 25-step plan across 7 phases |
+| 2026-03-13 | Implement Phase 1: root monorepo scaffold | `package.json`, `turbo.json`, `.prettierrc`, `.gitignore`, `tsconfig.base.json` |
