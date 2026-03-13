@@ -101,7 +101,7 @@ Backend looks up history by `chatId`; creates a new entry if not found.
 
 ## 7. Multi-Provider Backend
 
-**Environment variable:** `MODEL_PROVIDER` (e.g., `nova`, `openai`, `anthropic`, `stub`, or unset)
+**Environment variable:** `MODEL_PROVIDER` (e.g., `bedrock`, `openai`, `anthropic`, `stub`, or unset)
 
 **Design:**
 
@@ -110,7 +110,7 @@ Backend looks up history by `chatId`; creates a new entry if not found.
 
 **Real provider:**
 
-- `BedrockProvider` (`MODEL_PROVIDER=nova`): calls Amazon Nova via the AWS Bedrock ConverseCommand API; uses the `create_diagram` tool to select the appropriate Mermaid diagram type (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie) and return the definition; updates existing diagrams by embedding prior Mermaid definitions in history context
+- `BedrockProvider` (`MODEL_PROVIDER=bedrock`): calls Amazon Nova via the AWS Bedrock ConverseCommand API; uses the `create_diagram` tool to select the appropriate Mermaid diagram type (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie) and return the definition; updates existing diagrams by embedding prior Mermaid definitions in history context
 
 **Stub implementations:** `OpenAIStub`, `AnthropicStub`, `DefaultStub`
 
@@ -138,7 +138,7 @@ Backend looks up history by `chatId`; creates a new entry if not found.
 - Split-screen UI with chat and diagram panels (scrollable on overflow)
 - `POST /chat` endpoint with `chatId`; backend manages history via in-memory adapter
 - Mermaid.js diagram rendering (7 diagram types via tool use with real LLM)
-- Real LLM provider: `BedrockProvider` using Amazon Nova via AWS Bedrock (`MODEL_PROVIDER=nova`)
+- Real LLM provider: `BedrockProvider` using Amazon Nova via AWS Bedrock (`MODEL_PROVIDER=bedrock`)
 - Stub providers for local development (default, openai, anthropic)
 - Basic error handling (API errors, Mermaid parse errors)
 - Unit and integration tests for all providers, factory, history adapter, and API contract

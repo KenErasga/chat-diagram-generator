@@ -1,5 +1,5 @@
 export interface Turn {
-  role: 'user' | 'assistant';
+  role: 'user' | 'ai';
   content: string;
   diagram?: string;
 }

@@ -6,6 +6,7 @@ import {
 import { MODEL_PROVIDER_TOKEN, type IModelProvider } from '../providers/model-provider.interface';
 import type { ChatRequestDto } from './dto/chat-request.dto';
 import type { ChatResponseDto } from './dto/chat-response.dto';
+import type { ChatHistoryResponseDto, ChatListResponseDto } from './dto/chat-history-response.dto';
 
 const MESSAGE_PREVIEW_LENGTH = 80;
 
@@ -42,11 +43,19 @@ export class ChatService {
 
     this.historyAdapter.append(dto.chatId, { role: 'user', content: dto.message });
     this.historyAdapter.append(dto.chatId, {
-      role: 'assistant',
+      role: 'ai',
       content: response.content,
       diagram: response.diagram
     });
 
     return response;
+  }
+
+  getHistory(chatId: string): ChatHistoryResponseDto {
+    return { chatId, turns: this.historyAdapter.get(chatId) };
+  }
+
+  getAllChats(): ChatListResponseDto {
+    return { chats: this.historyAdapter.getAll() };
   }
 }

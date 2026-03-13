@@ -28,7 +28,7 @@ describe('DefaultStub', () => {
   it('does not break when non-empty history is provided', async () => {
     const history: Turn[] = [
       { role: 'user', content: 'prior message' },
-      { role: 'assistant', content: 'prior reply' }
+      { role: 'ai', content: 'prior reply' }
     ];
     const result = await stub.chat(history, 'Hello');
 

@@ -12,7 +12,7 @@ describe('ChatService', () => {
   let modelProvider: jest.Mocked<IModelProvider>;
 
   beforeEach(() => {
-    historyAdapter = { get: jest.fn(), append: jest.fn() };
+    historyAdapter = { get: jest.fn(), getAll: jest.fn(), append: jest.fn() };
     modelProvider = { chat: jest.fn() };
     service = new ChatService(historyAdapter, modelProvider);
   });
@@ -30,7 +30,7 @@ describe('ChatService', () => {
     expect(modelProvider.chat).toHaveBeenCalledWith(existingHistory, 'hello');
     expect(historyAdapter.append).toHaveBeenNthCalledWith(1, 'abc', { role: 'user', content: 'hello' });
     expect(historyAdapter.append).toHaveBeenNthCalledWith(SECOND_CALL, 'abc', {
-      role: 'assistant',
+      role: 'ai',
       content: 'hi there',
       diagram: undefined
     });
@@ -50,7 +50,7 @@ describe('ChatService', () => {
     await service.handleMessage({ chatId: 'abc', message: 'create a diagram' });
 
     expect(historyAdapter.append).toHaveBeenNthCalledWith(SECOND_CALL, 'abc', {
-      role: 'assistant',
+      role: 'ai',
       content: 'Here is your diagram.',
       diagram: 'flowchart TD\n  A --> B'
     });

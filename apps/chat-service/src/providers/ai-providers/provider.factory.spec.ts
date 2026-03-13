@@ -14,8 +14,8 @@ describe('providerFactory', () => {
     delete process.env.MODEL_PROVIDER;
   });
 
-  it('returns BedrockProvider when MODEL_PROVIDER=nova', () => {
-    process.env.MODEL_PROVIDER = 'nova';
+  it('returns BedrockProvider when MODEL_PROVIDER=bedrock', () => {
+    process.env.MODEL_PROVIDER = 'bedrock';
 
     expect(providerFactory()).toBeInstanceOf(BedrockProvider);
   });

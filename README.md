@@ -60,19 +60,19 @@ npm run dev:service
 
 ## Environment Variables
 
-| Variable                | Values                                   | Default                | Description                                             |
-| ----------------------- | ---------------------------------------- | ---------------------- | ------------------------------------------------------- |
-| `MODEL_PROVIDER`        | `nova`, `openai`, `anthropic`, _(unset)_ | `default`              | Provider to use (`nova` = real Bedrock)                 |
-| `PORT`                  | any port number                          | `3001`                 | Port the chat-service listens on                        |
-| `AWS_REGION`            | any AWS region                           | `eu-west-2`            | AWS region for Bedrock API calls (`nova` only)          |
-| `AWS_ACCESS_KEY_ID`     | AWS access key ID                        | _(SDK default chain)_  | AWS credential — env, `~/.aws/credentials`, or IAM role |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret access key                    | _(SDK default chain)_  | AWS credential — env, `~/.aws/credentials`, or IAM role |
-| `BEDROCK_MODEL_ID`      | any Bedrock model ID                     | `amazon.nova-pro-v1:0` | Model used when `MODEL_PROVIDER=nova`                   |
+| Variable                | Values                                      | Default                | Description                                             |
+| ----------------------- | ------------------------------------------- | ---------------------- | ------------------------------------------------------- |
+| `MODEL_PROVIDER`        | `bedrock`, `openai`, `anthropic`, _(unset)_ | `default`              | Provider to use (`bedrock` = real Bedrock)              |
+| `PORT`                  | any port number                             | `3001`                 | Port the chat-service listens on                        |
+| `AWS_REGION`            | any AWS region                              | `eu-west-2`            | AWS region for Bedrock API calls (`bedrock` only)       |
+| `AWS_ACCESS_KEY_ID`     | AWS access key ID                           | _(SDK default chain)_  | AWS credential — env, `~/.aws/credentials`, or IAM role |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret access key                       | _(SDK default chain)_  | AWS credential — env, `~/.aws/credentials`, or IAM role |
+| `BEDROCK_MODEL_ID`      | any Bedrock model ID                        | `amazon.nova-pro-v1:0` | Model used when `MODEL_PROVIDER=bedrock`                |
 
 Example — run with Amazon Nova (requires AWS credentials):
 
 ```bash
-MODEL_PROVIDER=nova AWS_REGION=eu-west-2 npm run dev:service
+MODEL_PROVIDER=bedrock AWS_REGION=eu-west-2 npm run dev:service
 ```
 
 Example — run with the OpenAI stub (no credentials needed):
@@ -102,7 +102,7 @@ npm test --workspace=apps/chat-service
 
 - **Backend-owned history** — the frontend sends only `{ chatId, message }` per request; the backend looks up and appends to the conversation history. `chatId` is a UUID generated once per browser session and stored in `sessionStorage`.
 - **In-memory history adapter** — a `Map<chatId, Turn[]>` wrapped behind `IHistoryAdapter`, making it straightforward to swap in a database-backed implementation.
-- **Model providers** — `BedrockProvider` (`MODEL_PROVIDER=nova`) is a real Amazon Nova integration using the AWS Bedrock ConverseCommand API; it selects from 7 Mermaid diagram types via tool use. `DefaultStub`, `OpenAIStub`, and `AnthropicStub` share the same stub logic: messages containing "create" return a hardcoded flowchart. All providers implement `IModelProvider`, so swapping is a one-line factory change.
+- **Model providers** — `BedrockProvider` (`MODEL_PROVIDER=bedrock`) is a real Amazon Nova integration using the AWS Bedrock ConverseCommand API; it selects from 7 Mermaid diagram types via tool use. `DefaultStub`, `OpenAIStub`, and `AnthropicStub` share the same stub logic: messages containing "create" return a hardcoded flowchart. All providers implement `IModelProvider`, so swapping is a one-line factory change.
 - **Mermaid dynamic import** — `mermaid` is imported inside a `useEffect` to avoid SSR issues with Next.js.
 
 ---

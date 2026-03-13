@@ -49,7 +49,7 @@ describe('BedrockProvider', () => {
     const mermaidDef = 'flowchart TD\n  X --> Y';
     const history: Turn[] = [
       { role: 'user', content: 'Create a chart' },
-      { role: 'assistant', content: 'Here is your diagram.', diagram: mermaidDef }
+      { role: 'ai', content: 'Here is your diagram.', diagram: mermaidDef }
     ];
 
     await provider.chat(history, 'Add a third node');

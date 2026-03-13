@@ -154,7 +154,7 @@ Design Output format:
     - The latest user message.
   - Returns a normalized response consistent with the API contract above.
 - **Real provider**
-  - **`BedrockProvider`** (`MODEL_PROVIDER = "nova"`):
+  - **`BedrockProvider`** (`MODEL_PROVIDER = "bedrock"`):
     - Calls Amazon Nova via the AWS Bedrock ConverseCommand API.
     - Uses the `create_diagram` tool to detect diagram intent and select the appropriate Mermaid diagram type (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie).
     - Prior diagrams from assistant turns are embedded as fenced Mermaid code blocks in history, giving the model context to update them.
@@ -171,7 +171,7 @@ Design Output format:
 - **Provider selection via environment**
   - Environment variable: `MODEL_PROVIDER`.
   - Behavior:
-    - `MODEL_PROVIDER = "nova"` → use `BedrockProvider` (Amazon Nova via Bedrock).
+    - `MODEL_PROVIDER = "bedrock"` → use `BedrockProvider` (Amazon Nova via Bedrock).
     - `MODEL_PROVIDER = "openai"` → use OpenAI stub.
     - `MODEL_PROVIDER = "anthropic"` → use Anthropic stub.
     - Any other value or unset → fall back to default stub.
@@ -202,7 +202,7 @@ Design Output format:
     - `POST /chat` controller and service.
     - In-memory history adapter behind a small interface.
     - Multi-provider model layer driven by `MODEL_PROVIDER`.
-  - Real LLM integration: `BedrockProvider` using Amazon Nova via AWS Bedrock ConverseCommand API (`MODEL_PROVIDER=nova`).
+  - Real LLM integration: `BedrockProvider` using Amazon Nova via AWS Bedrock ConverseCommand API (`MODEL_PROVIDER=bedrock`).
   - Smart diagram type selection — 7 Mermaid diagram types (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie) via `create_diagram` tool.
   - End-to-end flow:
     - User sends a message → provider decides whether to return a diagram or plain text → frontend updates transcript and diagram panel accordingly.

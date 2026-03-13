@@ -11,7 +11,7 @@ const logger = new Logger('ProviderFactory');
 export function providerFactory(): IModelProvider {
   const provider = process.env.MODEL_PROVIDER;
 
-  if (provider === 'nova') {
+  if (provider === 'bedrock') {
     logger.log('Using BedrockProvider (Amazon Nova on Bedrock)');
 
     return new BedrockProvider();
@@ -24,6 +24,7 @@ export function providerFactory(): IModelProvider {
   }
 
   if (provider === 'anthropic') {
+    // Update to use Bedrock (Amazon Claude on Bedrock)
     logger.log('Using Anthropic stub');
 
     return new AnthropicStub();

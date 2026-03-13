@@ -22,7 +22,7 @@ describe('InMemoryHistoryAdapter', () => {
 
   it('accumulates multiple turns in order', () => {
     const userTurn: Turn = { role: 'user', content: 'hello' };
-    const assistantTurn: Turn = { role: 'assistant', content: 'hi there' };
+    const assistantTurn: Turn = { role: 'ai', content: 'hi there' };
 
     adapter.append('chat-1', userTurn);
     adapter.append('chat-1', assistantTurn);
@@ -36,5 +36,28 @@ describe('InMemoryHistoryAdapter', () => {
 
     expect(adapter.get('chat-1')).toHaveLength(1);
     expect(adapter.get('chat-2')).toHaveLength(1);
+  });
+
+  it('getAll returns empty array when store is empty', () => {
+    expect(adapter.getAll()).toEqual([]);
+  });
+
+  it('getAll returns all chatIds with their turns', () => {
+    const turn1: Turn = { role: 'user', content: 'hello' };
+    const turn2: Turn = { role: 'user', content: 'world' };
+    const TWO_SESSIONS = 2;
+
+    adapter.append('chat-1', turn1);
+    adapter.append('chat-2', turn2);
+
+    const result = adapter.getAll();
+
+    expect(result).toHaveLength(TWO_SESSIONS);
+    expect(result).toEqual(
+      expect.arrayContaining([
+        { chatId: 'chat-1', turns: [turn1] },
+        { chatId: 'chat-2', turns: [turn2] }
+      ])
+    );
   });
 });

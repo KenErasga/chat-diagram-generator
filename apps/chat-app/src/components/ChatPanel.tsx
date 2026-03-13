@@ -5,7 +5,7 @@ import { getChatId } from '@/lib/chat-id';
 import { postChat } from '@/lib/api';
 
 interface DisplayMessage {
-  role: 'user' | 'assistant' | 'error';
+  role: 'user' | 'ai' | 'error';
   content: string;
 }
 
@@ -34,7 +34,7 @@ export function ChatPanel({ onDiagram }: ChatPanelProps) {
     try {
       const response = await postChat({ chatId: getChatId(), message: text });
 
-      setMessages(prev => [...prev, { role: 'assistant', content: response.content }]);
+      setMessages(prev => [...prev, { role: 'ai', content: response.content }]);
 
       if (response.type === 'diagram' && response.diagram) {
         onDiagram(response.diagram);

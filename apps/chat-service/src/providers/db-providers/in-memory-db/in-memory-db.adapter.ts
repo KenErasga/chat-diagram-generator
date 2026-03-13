@@ -10,6 +10,10 @@ export class InMemoryDbAdapter implements IInMemoryDbAdapter {
     return this.store.get(chatId) ?? [];
   }
 
+  getAll(): Array<{ chatId: string; turns: Turn[] }> {
+    return Array.from(this.store.entries()).map(([chatId, turns]) => ({ chatId, turns }));
+  }
+
   append(chatId: string, turn: Turn): void {
     const history = this.store.get(chatId) ?? [];
 

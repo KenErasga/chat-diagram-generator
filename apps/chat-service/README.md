@@ -64,22 +64,22 @@ npm test
 
 ## Environment Variables
 
-| Variable         | Values                                   | Default   | Description                |
-| ---------------- | ---------------------------------------- | --------- | -------------------------- |
-| `MODEL_PROVIDER` | `nova`, `openai`, `anthropic`, _(unset)_ | `default` | Provider to use            |
-| `PORT`           | any port number                          | `3001`    | Port the server listens on |
+| Variable         | Values                                      | Default   | Description                |
+| ---------------- | ------------------------------------------- | --------- | -------------------------- |
+| `MODEL_PROVIDER` | `bedrock`, `openai`, `anthropic`, _(unset)_ | `default` | Provider to use            |
+| `PORT`           | any port number                             | `3001`    | Port the server listens on |
 
 The service uses Nest’s `ConfigModule.forRoot({ envFilePath: '.env.local', isGlobal: true })`, so environment variables are automatically loaded from `apps/chat-service/.env.local` on startup (and can still be overridden by shell env vars).
 
 Example `apps/chat-service/.env.local`:
 
 ```bash
-MODEL_PROVIDER=nova
+MODEL_PROVIDER=bedrock
 ```
 
 ### Bedrock / Nova provider
 
-When `MODEL_PROVIDER=nova`, the service uses `BedrockProvider` which calls the AWS Bedrock ConverseCommand API via `@aws-sdk/client-bedrock-runtime`. Standard AWS credential resolution applies (environment variables, `~/.aws/credentials`, instance profile, etc.).
+When `MODEL_PROVIDER=bedrock`, the service uses `BedrockProvider` which calls the AWS Bedrock ConverseCommand API via `@aws-sdk/client-bedrock-runtime`. Standard AWS credential resolution applies (environment variables, `~/.aws/credentials`, instance profile, etc.).
 
 | Variable                | Description                                     | Default                |
 | ----------------------- | ----------------------------------------------- | ---------------------- |
@@ -152,6 +152,6 @@ src/
         anthropic.stub.ts        Anthropic stub provider
       bedrock/
         base-bedrock.provider.ts Abstract base: ConverseCommand, tool config, history mapping
-        bedrock.provider.ts      BedrockProvider — Amazon Nova via Bedrock (MODEL_PROVIDER=nova)
+        bedrock.provider.ts      BedrockProvider — Amazon Nova via Bedrock (MODEL_PROVIDER=bedrock)
     providers.module.ts
 ```

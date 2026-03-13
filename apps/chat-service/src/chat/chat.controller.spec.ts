@@ -1,17 +1,18 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import { type INestApplication, HttpStatus, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { ChatModule } from './chat.module';
 import { IN_MEMORY_DB_ADAPTER } from '../providers/db-providers/in-memory-db/in-memory-db.adapter.interface';
 import { MODEL_PROVIDER_TOKEN } from '../providers/model-provider.interface';
 
-const HTTP_CREATED = 201;
-const HTTP_BAD_REQUEST = 400;
-
 describe('ChatController (integration)', () => {
   let app: INestApplication;
 
-  const mockHistoryAdapter = { get: jest.fn().mockReturnValue([]), append: jest.fn() };
+  const mockHistoryAdapter = {
+    get: jest.fn().mockReturnValue([]),
+    getAll: jest.fn().mockReturnValue([]),
+    append: jest.fn()
+  };
   const mockModelProvider = {
     chat: jest.fn().mockResolvedValue({ type: 'message', content: 'stub reply' })
   };
@@ -38,26 +39,27 @@ describe('ChatController (integration)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHistoryAdapter.get.mockReturnValue([]);
+    mockHistoryAdapter.getAll.mockReturnValue([]);
     mockModelProvider.chat.mockResolvedValue({ type: 'message', content: 'stub reply' });
   });
 
   it('POST /chat returns 201 with response shape for valid body', async () => {
     const response = await request(app.getHttpServer()).post('/chat').send({ chatId: 'test-id', message: 'hello' });
 
-    expect(response.status).toBe(HTTP_CREATED);
+    expect(response.status).toBe(HttpStatus.CREATED);
     expect(response.body).toMatchObject({ type: 'message', content: 'stub reply' });
   });
 
   it('POST /chat returns 400 when chatId is missing', async () => {
     const response = await request(app.getHttpServer()).post('/chat').send({ message: 'hello' });
 
-    expect(response.status).toBe(HTTP_BAD_REQUEST);
+    expect(response.status).toBe(HttpStatus.BAD_REQUEST);
   });
 
   it('POST /chat returns 400 when message is missing', async () => {
     const response = await request(app.getHttpServer()).post('/chat').send({ chatId: 'test-id' });
 
-    expect(response.status).toBe(HTTP_BAD_REQUEST);
+    expect(response.status).toBe(HttpStatus.BAD_REQUEST);
   });
 
   it('POST /chat returns diagram response when provider returns diagram type', async () => {
@@ -71,8 +73,50 @@ describe('ChatController (integration)', () => {
       .post('/chat')
       .send({ chatId: 'test-id', message: 'create a flowchart' });
 
-    expect(response.status).toBe(HTTP_CREATED);
+    expect(response.status).toBe(HttpStatus.CREATED);
     expect(response.body.type).toBe('diagram');
     expect(typeof response.body.diagram).toBe('string');
+  });
+
+  it('GET /chat returns 200 with empty chats when no sessions exist', async () => {
+    const response = await request(app.getHttpServer()).get('/chat');
+
+    expect(response.status).toBe(HttpStatus.OK);
+    expect(response.body).toMatchObject({ chats: [] });
+  });
+
+  it('GET /chat returns all sessions from history adapter', async () => {
+    const sessions = [
+      { chatId: 'session-1', turns: [{ role: 'user', content: 'hello' }] },
+      { chatId: 'session-2', turns: [] }
+    ];
+
+    mockHistoryAdapter.getAll.mockReturnValue(sessions);
+
+    const response = await request(app.getHttpServer()).get('/chat');
+
+    expect(response.status).toBe(HttpStatus.OK);
+    expect(response.body).toMatchObject({ chats: sessions });
+  });
+
+  it('GET /chat/:chatId returns 200 with empty turns for unknown chatId', async () => {
+    const response = await request(app.getHttpServer()).get('/chat/unknown-id');
+
+    expect(response.status).toBe(HttpStatus.OK);
+    expect(response.body).toMatchObject({ chatId: 'unknown-id', turns: [] });
+  });
+
+  it('GET /chat/:chatId returns turns from history adapter', async () => {
+    const turns = [
+      { role: 'user', content: 'hello' },
+      { role: 'ai', content: 'hi there' }
+    ];
+
+    mockHistoryAdapter.get.mockReturnValue(turns);
+
+    const response = await request(app.getHttpServer()).get('/chat/my-session');
+
+    expect(response.status).toBe(HttpStatus.OK);
+    expect(response.body).toMatchObject({ chatId: 'my-session', turns });
   });
 });
