@@ -1,5 +1,5 @@
 import { DefaultStub } from './default.stub';
-import type { Turn } from '../db-providers/in-memory-db/turn.type';
+import type { Turn } from '../../db-providers/in-memory-db/turn.type';
 
 describe('DefaultStub', () => {
   const stub = new DefaultStub();

@@ -4,10 +4,10 @@ jest.mock('@aws-sdk/client-bedrock-runtime', () => ({
 }));
 
 import { providerFactory } from './ai-provider.factory';
-import { AnthropicStub } from './anthropic.stub';
-import { BedrockProvider } from './bedrock.provider';
-import { DefaultStub } from './default.stub';
-import { OpenAIStub } from './openai.stub';
+import { AnthropicStub } from './stubs/anthropic.stub';
+import { BedrockProvider } from './bedrock/bedrock.provider';
+import { DefaultStub } from './stubs/default.stub';
+import { OpenAIStub } from './stubs/openai.stub';
 
 describe('providerFactory', () => {
   afterEach(() => {

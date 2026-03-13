@@ -64,7 +64,7 @@ npm run dev:service
 | ----------------------- | ---------------------------------------- | ---------------------- | ------------------------------------------------------- |
 | `MODEL_PROVIDER`        | `nova`, `openai`, `anthropic`, _(unset)_ | `default`              | Provider to use (`nova` = real Bedrock)                 |
 | `PORT`                  | any port number                          | `3001`                 | Port the chat-service listens on                        |
-| `AWS_REGION`            | any AWS region                           | `us-east-1`            | AWS region for Bedrock API calls (`nova` only)          |
+| `AWS_REGION`            | any AWS region                           | `eu-west-2`            | AWS region for Bedrock API calls (`nova` only)          |
 | `AWS_ACCESS_KEY_ID`     | AWS access key ID                        | _(SDK default chain)_  | AWS credential — env, `~/.aws/credentials`, or IAM role |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret access key                    | _(SDK default chain)_  | AWS credential — env, `~/.aws/credentials`, or IAM role |
 | `BEDROCK_MODEL_ID`      | any Bedrock model ID                     | `amazon.nova-pro-v1:0` | Model used when `MODEL_PROVIDER=nova`                   |
@@ -72,7 +72,7 @@ npm run dev:service
 Example — run with Amazon Nova (requires AWS credentials):
 
 ```bash
-MODEL_PROVIDER=nova AWS_REGION=us-east-1 npm run dev:service
+MODEL_PROVIDER=nova AWS_REGION=eu-west-2 npm run dev:service
 ```
 
 Example — run with the OpenAI stub (no credentials needed):

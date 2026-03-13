@@ -6,12 +6,28 @@ import {
   type Message,
   type ToolConfiguration
 } from '@aws-sdk/client-bedrock-runtime';
-import type { ChatResponseDto } from '../../chat/dto/chat-response.dto';
-import type { IModelProvider } from '../model-provider.interface';
-import type { Turn } from '../db-providers/in-memory-db/turn.type';
-import { getAwsRegion } from './config';
+import type { ChatResponseDto } from '../../../chat/dto/chat-response.dto';
+import type { IModelProvider } from '../../model-provider.interface';
+import type { Turn } from '../../db-providers/in-memory-db/turn.type';
+import { getAwsRegion } from '../config';
 
 const MAX_TOKENS = 4096;
+
+const KNOWN_DIAGRAM_TYPES = [
+  'flowchart',
+  'sequenceDiagram',
+  'classDiagram',
+  'erDiagram',
+  'stateDiagram-v2',
+  'gantt',
+  'pie'
+] as const;
+
+function extractDiagramType(mermaid: string): string {
+  const firstLine = mermaid.trim().split('\n')[0];
+
+  return KNOWN_DIAGRAM_TYPES.find(t => firstLine.startsWith(t)) ?? 'flowchart';
+}
 
 const CREATE_DIAGRAM_TOOL_CONFIG: ToolConfiguration = {
   tools: [
@@ -102,24 +118,54 @@ export abstract class BaseBedrockProvider implements IModelProvider {
   }
 
   private mapHistoryToMessages(history: Turn[], newMessage: string): Message[] {
-    const messages: Message[] = history.map(turn => {
+    const messages: Message[] = [];
+
+    for (let i = 0; i < history.length; i++) {
+      const turn = history[i];
+
       if (turn.role === 'user') {
-        return { role: 'user', content: [{ text: turn.content }] };
+        messages.push({ role: 'user', content: [{ text: turn.content }] });
+        continue;
       }
 
       if (turn.diagram !== undefined) {
-        return {
+        const toolUseId = `tu-${i}`;
+
+        messages.push({
           role: 'assistant',
           content: [
             {
-              text: `${turn.content}\n\nCurrent diagram:\n\`\`\`mermaid\n${turn.diagram}\n\`\`\``
+              toolUse: {
+                toolUseId,
+                name: 'create_diagram',
+                input: {
+                  diagram_type: extractDiagramType(turn.diagram),
+                  mermaid_definition: turn.diagram,
+                  explanation: turn.content
+                }
+              }
             }
           ]
-        };
+        });
+
+        messages.push({
+          role: 'user',
+          content: [
+            {
+              toolResult: {
+                toolUseId,
+                content: [{ text: 'Diagram created successfully.' }],
+                status: 'success'
+              }
+            }
+          ]
+        });
+
+        continue;
       }
 
-      return { role: 'assistant', content: [{ text: turn.content }] };
-    });
+      messages.push({ role: 'assistant', content: [{ text: turn.content }] });
+    }
 
     messages.push({ role: 'user', content: [{ text: newMessage }] });
 

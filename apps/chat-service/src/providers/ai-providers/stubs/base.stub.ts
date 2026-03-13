@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
-import type { ChatResponseDto } from '../../chat/dto/chat-response.dto';
-import type { IModelProvider } from '../model-provider.interface';
-import type { Turn } from '../db-providers/in-memory-db/turn.type';
+import type { ChatResponseDto } from '../../../chat/dto/chat-response.dto';
+import type { IModelProvider } from '../../model-provider.interface';
+import type { Turn } from '../../db-providers/in-memory-db/turn.type';
 import { DIAGRAM_DEFINITION } from './stub-fixtures';
 
 export class BaseStub implements IModelProvider {

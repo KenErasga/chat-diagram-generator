@@ -1,9 +1,9 @@
 import { Logger } from '@nestjs/common';
 import type { IModelProvider } from '../model-provider.interface';
-import { AnthropicStub } from './anthropic.stub';
-import { BedrockProvider } from './bedrock.provider';
-import { DefaultStub } from './default.stub';
-import { OpenAIStub } from './openai.stub';
+import { AnthropicStub } from './stubs/anthropic.stub';
+import { BedrockProvider } from './bedrock/bedrock.provider';
+import { DefaultStub } from './stubs/default.stub';
+import { OpenAIStub } from './stubs/openai.stub';
 
 const logger = new Logger('ProviderFactory');
 

@@ -83,13 +83,13 @@ When `MODEL_PROVIDER=nova`, the service uses `BedrockProvider` which calls the A
 
 | Variable                | Description                                     | Default                |
 | ----------------------- | ----------------------------------------------- | ---------------------- |
-| `AWS_REGION`            | AWS region for Bedrock API calls                | `us-east-1`            |
+| `AWS_REGION`            | AWS region for Bedrock API calls                | `eu-west-2`            |
 | `AWS_ACCESS_KEY_ID`     | AWS access key ID (standard SDK credential)     | _(resolved by SDK)_    |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret access key (standard SDK credential) | _(resolved by SDK)_    |
 | `AWS_SESSION_TOKEN`     | AWS session token for temporary credentials     | _(resolved by SDK)_    |
 | `BEDROCK_MODEL_ID`      | Model ID used by `BedrockProvider`              | `amazon.nova-pro-v1:0` |
 
-The IAM principal used must have `bedrock:InvokeModel` permission on the target model ARN (e.g. `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0`).
+The IAM principal used must have `bedrock:InvokeModel` permission on the target model ARN (e.g. `arn:aws:bedrock:eu-west-2::foundation-model/amazon.nova-pro-v1:0`).
 
 ---
 
@@ -144,10 +144,14 @@ src/
     model-provider.interface.ts  IModelProvider + MODEL_PROVIDER_TOKEN
     ai-providers/
       ai-provider.factory.ts     Reads MODEL_PROVIDER env var, returns BedrockProvider or stub
-      base-bedrock.provider.ts   Abstract base: ConverseCommand, tool config, history mapping
-      bedrock.provider.ts        BedrockProvider — Amazon Nova via Bedrock (MODEL_PROVIDER=nova)
-      default.stub.ts
-      openai.stub.ts
-      anthropic.stub.ts
+      config.ts                  Shared AI config (region, model IDs)
+      stubs/
+        base.stub.ts             Shared stub implementation
+        default.stub.ts          Default stub provider
+        openai.stub.ts           OpenAI stub provider
+        anthropic.stub.ts        Anthropic stub provider
+      bedrock/
+        base-bedrock.provider.ts Abstract base: ConverseCommand, tool config, history mapping
+        bedrock.provider.ts      BedrockProvider — Amazon Nova via Bedrock (MODEL_PROVIDER=nova)
     providers.module.ts
 ```

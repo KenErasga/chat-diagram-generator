@@ -8,7 +8,7 @@ jest.mock('@aws-sdk/client-bedrock-runtime', () => ({
 import { ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
 import { BedrockProvider } from './bedrock.provider';
 import { makeToolUseResponse, makeTextResponse } from './bedrock-test-fixtures';
-import type { Turn } from '../db-providers/in-memory-db/turn.type';
+import type { Turn } from '../../db-providers/in-memory-db/turn.type';
 
 describe('BedrockProvider', () => {
   let provider: BedrockProvider;
@@ -43,7 +43,7 @@ describe('BedrockProvider', () => {
     expect(result.content).toBe(text);
   });
 
-  it('includes prior diagram in the assistant turn passed to ConverseCommand', async () => {
+  it('includes prior diagram as toolUse/toolResult blocks in history passed to ConverseCommand', async () => {
     mockSend.mockResolvedValueOnce(makeTextResponse('Updated.'));
 
     const mermaidDef = 'flowchart TD\n  X --> Y';
@@ -54,14 +54,26 @@ describe('BedrockProvider', () => {
 
     await provider.chat(history, 'Add a third node');
 
+    type AnyMessage = { role: string; content: Array<Record<string, unknown>> };
     const callArg = (ConverseCommand as unknown as jest.Mock).mock.calls[0][0] as {
-      messages: Array<{ role: string; content: Array<{ text?: string }> }>;
+      messages: AnyMessage[];
     };
-    const assistantTurn = callArg.messages.find(m => m.role === 'assistant');
 
-    expect(assistantTurn).toBeDefined();
-    expect(assistantTurn?.content[0].text).toContain('```mermaid');
-    expect(assistantTurn?.content[0].text).toContain(mermaidDef);
+    const assistantToolUse = callArg.messages.find(m => m.role === 'assistant' && m.content.some(b => 'toolUse' in b));
+
+    expect(assistantToolUse).toBeDefined();
+
+    const toolUseBlock = assistantToolUse!.content.find(b => 'toolUse' in b) as {
+      toolUse: { name: string; input: { mermaid_definition: string; diagram_type: string } };
+    };
+
+    expect(toolUseBlock.toolUse.name).toBe('create_diagram');
+    expect(toolUseBlock.toolUse.input.mermaid_definition).toBe(mermaidDef);
+    expect(toolUseBlock.toolUse.input.diagram_type).toBe('flowchart');
+
+    const userToolResult = callArg.messages.find(m => m.role === 'user' && m.content.some(b => 'toolResult' in b));
+
+    expect(userToolResult).toBeDefined();
   });
 
   it('uses the default Bedrock model ID when BEDROCK_MODEL_ID is not set', async () => {

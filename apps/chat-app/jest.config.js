@@ -6,5 +6,7 @@ module.exports = {
   testRegex: '.*\\.test\\.tsx?$',
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react-jsx', module: 'CommonJS' } }]
-  }
+  },
+  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.test.{ts,tsx}'],
+  coverageDirectory: 'coverage'
 };
