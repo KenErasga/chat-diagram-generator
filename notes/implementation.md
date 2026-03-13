@@ -67,6 +67,7 @@ Include: `node_modules`, `dist`, `.next`, `.turbo`, `*.env.local`, `.env`, `cove
 ### Step 5 — `tsconfig.base.json`
 
 Strict base shared across all packages:
+
 - `"strict": true`
 - `"target": "ES2022"`
 - `"moduleResolution": "bundler"`
@@ -87,6 +88,7 @@ Strict base shared across all packages:
 ### Step 7 — `packages/eslint-config/index.js`
 
 Export a config object with:
+
 - `extends`: `["eslint:recommended", "plugin:@typescript-eslint/recommended"]`
 - `parser`: `@typescript-eslint/parser`
 - `rules`:
@@ -177,6 +179,7 @@ Files: `src/providers/`
 - `provider.factory.ts` — reads `process.env.MODEL_PROVIDER`; returns matching stub; registered as NestJS provider
 
 Environment variable:
+
 - `MODEL_PROVIDER=openai` → `OpenAIStub`
 - `MODEL_PROVIDER=anthropic` → `AnthropicStub`
 - unset or anything else → `DefaultStub`
@@ -234,12 +237,14 @@ Files: `src/**/*.spec.ts` + `jest.config.ts`
 ### Step 22 — `src/lib/` and frontend tests
 
 **Lib files:**
+
 - `api.ts` — typed `postChat(req: ChatRequest): Promise<ChatResponse>` using `fetch('/api/chat', { method: 'POST', ... })`; throws on non-2xx
 - `chat-id.ts` — `getChatId()`: reads `sessionStorage.getItem('chatId')`; if missing, generates a UUID v4, stores and returns it
 
 **Jest config:** `jest.config.ts` with `testEnvironment: 'jsdom'`, `setupFilesAfterFramework: ['@testing-library/jest-dom']`
 
 **Tests:**
+
 - `ChatPanel.test.tsx` — submit message → appears in list; `'message'` response → assistant reply shown; `'diagram'` response → `onDiagram` called; fetch error → error message shown
 - `DiagramPanel.test.tsx` — `null` → placeholder; diagram set → `mermaid.render` called (mock module); render throws → error state shown
 - `api.test.ts` — `fetch` 200 → resolves typed response; `fetch` 500 → throws
@@ -266,12 +271,14 @@ turbo run dev
 - `chat-app` on `http://localhost:3000`
 
 Manual steps:
+
 1. Open `http://localhost:3000`
 2. Submit `"Create a simple flowchart"` → diagram panel renders Mermaid flowchart
 3. Submit `"What does this show?"` → plain reply in chat, diagram unchanged
 4. Refresh → chat clears, diagram panel shows placeholder
 
 Optional — run with a specific provider:
+
 ```bash
 MODEL_PROVIDER=openai turbo run dev
 ```
