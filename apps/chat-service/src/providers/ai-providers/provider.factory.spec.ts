@@ -1,7 +1,7 @@
-import { providerFactory } from './provider.factory';
-import { AnthropicStub } from './stubs/anthropic.stub';
-import { DefaultStub } from './stubs/default.stub';
-import { OpenAIStub } from './stubs/openai.stub';
+import { providerFactory } from './ai-provider.factory';
+import { AnthropicStub } from './anthropic.stub';
+import { DefaultStub } from './default.stub';
+import { OpenAIStub } from './openai.stub';
 
 describe('providerFactory', () => {
   afterEach(() => {

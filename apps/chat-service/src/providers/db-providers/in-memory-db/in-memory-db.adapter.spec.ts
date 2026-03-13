@@ -1,11 +1,11 @@
-import { InMemoryHistoryAdapter } from './in-memory-history.adapter';
+import { InMemoryDbAdapter } from './in-memory-db.adapter';
 import type { Turn } from './turn.type';
 
 describe('InMemoryHistoryAdapter', () => {
-  let adapter: InMemoryHistoryAdapter;
+  let adapter: InMemoryDbAdapter;
 
   beforeEach(() => {
-    adapter = new InMemoryHistoryAdapter();
+    adapter = new InMemoryDbAdapter();
   });
 
   it('returns empty array for unknown chatId', () => {

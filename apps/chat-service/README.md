@@ -110,19 +110,21 @@ src/
     dto/
       chat-request.dto.ts        { chatId, message } with class-validator
       chat-response.dto.ts       { type, content, diagram? }
-  history/
-    history.adapter.interface.ts IHistoryAdapter + HISTORY_ADAPTER token
-    in-memory-history.adapter.ts Map<chatId, Turn[]> implementation
-    history.module.ts
-    turn.type.ts                 { role, content, diagram? }
+  providers/
+    db-providers/
+      in-memory-db/
+        in-memory-db.adapter.interface.ts IInMemoryDbAdapter + IN_MEMORY_DB_ADAPTER token
+        in-memory-db.adapter.ts           Map<chatId, Turn[]> implementation
+        in-memory-db.module.ts            Exposes IN_MEMORY_DB_ADAPTER for injection
+        turn.type.ts                      { role, content, diagram? }
   providers/
     model-provider.interface.ts  IModelProvider + MODEL_PROVIDER_TOKEN
-    provider.factory.ts          Reads MODEL_PROVIDER env var, returns stub
-    providers.module.ts
-    stubs/
+    ai-providers/
+      ai-provider.factory.ts     Reads MODEL_PROVIDER env var, returns stub
       default.stub.ts
       openai.stub.ts
       anthropic.stub.ts
+    providers.module.ts
 ```
 
 ---

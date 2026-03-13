@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import type { IHistoryAdapter } from './history.adapter.interface';
+import type { IInMemoryDbAdapter } from './in-memory-db.adapter.interface';
 import type { Turn } from './turn.type';
 
 @Injectable()
-export class InMemoryHistoryAdapter implements IHistoryAdapter {
-  private readonly store = new Map<string, Turn[]>(); // This would be a database in a real application
+export class InMemoryDbAdapter implements IInMemoryDbAdapter {
+  private readonly store = new Map<string, Turn[]>();
 
   get(chatId: string): Turn[] {
     return this.store.get(chatId) ?? [];

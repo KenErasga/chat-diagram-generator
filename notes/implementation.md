@@ -150,22 +150,22 @@ Export a config object with:
 
 Files: `src/chat/`
 
-- `chat.module.ts` — imports `HistoryModule`, provides `ChatService`
+- `chat.module.ts` — imports `InMemoryDbModule` from `providers/db-providers/in-memory-db`, provides `ChatService`
 - `chat.controller.ts` — `@Post('chat')`, delegates to `ChatService.handleMessage(dto)`
 - `chat.service.ts` — injects `HistoryAdapter` + `ModelProvider`; gets history by chatId, calls provider, appends turn, returns response
 - `dto/chat-request.dto.ts` — `{ chatId: string; message: string }`
 - `dto/chat-response.dto.ts` — `{ type: 'diagram' | 'message'; content: string; diagram?: string }`
 
-### Step 15 — History adapter
+### Step 15 — In-memory DB adapter
 
-Files: `src/history/`
+Files: `src/providers/db-providers/in-memory-db/`
 
 - `turn.type.ts` — `{ role: 'user' | 'assistant'; content: string; diagram?: string }`
-- `history.adapter.interface.ts` — `IHistoryAdapter`:
+- `in-memory-db.adapter.interface.ts` — `IInMemoryDbAdapter`:
   - `get(chatId: string): Turn[]`
   - `append(chatId: string, turn: Turn): void`
-- `in-memory-history.adapter.ts` — implements `IHistoryAdapter` using `Map<string, Turn[]>`; creates empty array for unknown `chatId`
-- `history.module.ts` — provides `InMemoryHistoryAdapter` under the token `HISTORY_ADAPTER`, exports it
+- `in-memory-db.adapter.ts` — implements `IInMemoryDbAdapter` using `Map<string, Turn[]>`; creates empty array for unknown `chatId`
+- `in-memory-db.module.ts` — provides `InMemoryDbAdapter` under the token `IN_MEMORY_DB_ADAPTER`, exports it
 
 ### Step 16 — Provider stubs
 
@@ -173,10 +173,10 @@ Files: `src/providers/`
 
 - `model-provider.interface.ts` — `IModelProvider`:
   - `chat(history: Turn[], message: string): Promise<ChatResponseDto>`
-- `stubs/default.stub.ts` — if `message.toLowerCase().includes('create')` → return diagram with hardcoded Mermaid flowchart; else → plain reply
-- `stubs/openai.stub.ts` — same stub logic, different class name
-- `stubs/anthropic.stub.ts` — same stub logic, different class name
-- `provider.factory.ts` — reads `process.env.MODEL_PROVIDER`; returns matching stub; registered as NestJS provider
+- `ai-providers/default.stub.ts` — if `message.toLowerCase().includes('create')` → return diagram with hardcoded Mermaid flowchart; else → plain reply
+- `ai-providers/openai.stub.ts` — same stub logic, different class name
+- `ai-providers/anthropic.stub.ts` — same stub logic, different class name
+- `ai-providers/ai-provider.factory.ts` — reads `process.env.MODEL_PROVIDER`; returns matching stub; registered as NestJS provider
 
 Environment variable:
 

@@ -12,7 +12,7 @@ describe('AppController', () => {
     controller = module.get(AppController);
   });
 
-  it('should return "Hello World"', () => {
-    expect(controller.getHello()).toBe('Hello World');
+  it('returns health status ok', () => {
+    expect(controller.getHealth()).toEqual({ status: 'ok' });
   });
 });

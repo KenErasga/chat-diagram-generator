@@ -1,8 +1,8 @@
 import type { Turn } from './turn.type';
 
-export const HISTORY_ADAPTER = 'HISTORY_ADAPTER';
+export const IN_MEMORY_DB_ADAPTER = 'IN_MEMORY_DB_ADAPTER';
 
-export interface IHistoryAdapter {
+export interface IInMemoryDbAdapter {
   get(chatId: string): Turn[];
   append(chatId: string, turn: Turn): void;
 }

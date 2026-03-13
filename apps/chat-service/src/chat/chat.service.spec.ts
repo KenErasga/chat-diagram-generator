@@ -1,12 +1,14 @@
 import { ChatService } from './chat.service';
 import type { ChatResponseDto } from './dto/chat-response.dto';
-import type { IHistoryAdapter } from '../history/history.adapter.interface';
+import type { IInMemoryDbAdapter } from '../providers/db-providers/in-memory-db/in-memory-db.adapter.interface';
 import type { IModelProvider } from '../providers/model-provider.interface';
-import type { Turn } from '../history/turn.type';
+import type { Turn } from '../providers/db-providers/in-memory-db/turn.type';
+
+const SECOND_CALL = 2;
 
 describe('ChatService', () => {
   let service: ChatService;
-  let historyAdapter: jest.Mocked<IHistoryAdapter>;
+  let historyAdapter: jest.Mocked<IInMemoryDbAdapter>;
   let modelProvider: jest.Mocked<IModelProvider>;
 
   beforeEach(() => {
@@ -27,7 +29,7 @@ describe('ChatService', () => {
     expect(historyAdapter.get).toHaveBeenCalledWith('abc');
     expect(modelProvider.chat).toHaveBeenCalledWith(existingHistory, 'hello');
     expect(historyAdapter.append).toHaveBeenNthCalledWith(1, 'abc', { role: 'user', content: 'hello' });
-    expect(historyAdapter.append).toHaveBeenNthCalledWith(2, 'abc', {
+    expect(historyAdapter.append).toHaveBeenNthCalledWith(SECOND_CALL, 'abc', {
       role: 'assistant',
       content: 'hi there',
       diagram: undefined
@@ -47,7 +49,7 @@ describe('ChatService', () => {
 
     await service.handleMessage({ chatId: 'abc', message: 'create a diagram' });
 
-    expect(historyAdapter.append).toHaveBeenNthCalledWith(2, 'abc', {
+    expect(historyAdapter.append).toHaveBeenNthCalledWith(SECOND_CALL, 'abc', {
       role: 'assistant',
       content: 'Here is your diagram.',
       diagram: 'flowchart TD\n  A --> B'
