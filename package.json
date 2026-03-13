@@ -8,6 +8,8 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
+    "dev:app": "turbo run dev --filter=@repo/chat-app",
+    "dev:service": "turbo run dev --filter=@repo/chat-service",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",

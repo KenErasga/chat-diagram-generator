@@ -90,3 +90,159 @@ Design Output format:
 - Explicitly call out uncertainty and optional enhancements
 
 ---
+
+## Implemented Architecture (Snapshot)
+
+- **Monorepo layout**
+  - `apps/chat-app`: Next.js frontend providing a split-screen UI (chat panel + diagram panel).
+  - `apps/chat-service`: NestJS backend exposing a `POST /chat` endpoint.
+  - `packages/eslint-config`: Shared ESLint configuration.
+- **Backend responsibilities**
+  - Owns conversation history and message turns.
+  - Selects a model provider based on environment (`MODEL_PROVIDER`) and delegates chat completion to that provider.
+  - Returns a normalized response indicating whether the result is a plain message or a diagram (plus Mermaid definition when applicable).
+- **Frontend responsibilities**
+  - Renders a chat interface and sends user messages to `/api/chat` (proxied to the backend).
+  - Maintains a per-session `chatId` in browser storage and passes it to the backend with each request.
+  - Renders Mermaid diagrams in the right-hand panel when the backend responds with a diagram-type message.
+
+---
+
+## API Contract (Current)
+
+- **Request (frontend → backend)**
+  - `POST /chat`
+  - Body fields:
+    - `chatId`: string — stable identifier for the conversation, generated once per browser session.
+    - `message`: string — the latest user message.
+- **Response (backend → frontend)**
+  - Fields:
+    - `type`: `"diagram"` or `"message"`.
+    - `content`: string — human-readable assistant content.
+    - `diagram` (optional): string — Mermaid flowchart definition when `type === "diagram"`.
+- **Behavior**
+  - The frontend always sends only the new user message plus `chatId`.
+  - The backend reconstructs full conversation context from history and passes it to the provider.
+  - When `type === "diagram"`, the frontend both displays the assistant text and updates the diagram panel with the new Mermaid definition (replacing any existing diagram).
+
+---
+
+## Conversation Context & History Representation
+
+- **Turn model**
+  - A turn contains:
+    - `role`: `"user"` or `"assistant"`.
+    - `content`: string — message text.
+    - `diagram` (optional): string — Mermaid definition associated with that turn, when present.
+- **History storage**
+  - In-memory adapter: a map from `chatId` to an ordered array of turns.
+  - New conversations start with an empty history; turns are appended after each request/response cycle.
+- **Context passed to provider**
+  - On each `POST /chat`, the backend:
+    - Looks up existing turns for `chatId`.
+    - Appends the latest user turn.
+    - Sends the full sequence of turns (including prior diagrams) to the stub provider.
+  - This ensures previously generated diagrams are available as part of the LLM context via the `diagram` field on assistant turns.
+
+---
+
+## Stubbed Multi-Provider Backend Design
+
+- **Provider abstraction**
+  - A `ModelProvider` interface defines a single chat method that takes:
+    - The full turn history (including any diagram metadata).
+    - The latest user message.
+  - Returns a normalized response consistent with the API contract above.
+- **Stub implementations**
+  - **Default stub**:
+    - If the incoming message text (case-insensitive) contains `"create"`, returns:
+      - `type = "diagram"`.
+      - `content` explaining that a diagram was created.
+      - `diagram` with a fixed, hardcoded Mermaid flowchart snippet.
+    - Otherwise returns `type = "message"` with a simple non-diagram reply.
+  - **OpenAI stub** and **Anthropic stub**:
+    - Share the same control flow and behavior as the default stub, differing only by class name and selection logic.
+- **Provider selection via environment**
+  - Environment variable: `MODEL_PROVIDER`.
+  - Behavior:
+    - `MODEL_PROVIDER = "openai"` → use OpenAI stub.
+    - `MODEL_PROVIDER = "anthropic"` → use Anthropic stub.
+    - Any other value or unset → fall back to default stub.
+  - A small factory encapsulates this switch and is registered as the NestJS provider, making it easy to swap in a real implementation later.
+
+---
+
+## Diagram Rendering with Mermaid
+
+- **Rendering strategy**
+  - The frontend uses Mermaid.js to render diagram responses into SVG in the right-hand panel.
+  - Mermaid is dynamically imported on the client side (inside a React effect) to avoid SSR issues with Next.js.
+- **Update behavior**
+  - When a new response with `type = "diagram"` arrives:
+    - The current diagram definition in React state is replaced with the new Mermaid definition.
+    - The diagram panel re-renders the SVG accordingly.
+  - When responses are non-diagram (`type = "message"`), the existing diagram is left unchanged and only the chat transcript is updated.
+- **Error handling**
+  - If Mermaid fails to render (e.g., invalid syntax), the UI shows a clear error message in the diagram panel instead of breaking the page.
+
+---
+
+## Implemented vs Future Work
+
+- **Implemented now**
+  - Split-screen Next.js frontend with chat and diagram panels.
+  - NestJS backend with:
+    - `POST /chat` controller and service.
+    - In-memory history adapter behind a small interface.
+    - Stubbed multi-provider model layer driven by `MODEL_PROVIDER`.
+  - End-to-end flow:
+    - User sends a message → backend uses stubs to decide whether to return a diagram or plain text → frontend updates transcript and diagram panel accordingly.
+  - Basic error handling on both frontend (network and rendering errors) and backend (invalid payloads, provider failures).
+- **Deliberately left for future improvements**
+  - Real LLM integrations (OpenAI, Anthropic, etc.) wired into the provider interface.
+  - Streaming responses (server-sent events or WebSockets).
+  - Persistent history store (e.g., database-backed adapter implementing the same history interface).
+  - Authentication, multi-user support, and authorization.
+  - Additional diagram types beyond Mermaid flowcharts and UI affordances for diagram export.
+
+---
+
+## Test Strategy (Current)
+
+- **Backend tests**
+  - Unit tests for:
+    - In-memory history adapter (ordering and initialization behavior).
+    - Provider factory (correct stub selection based on `MODEL_PROVIDER`).
+    - Default stub logic (inputs with/without `"create"`).
+  - Integration-style tests verifying `POST /chat`:
+    - Returns the expected shape for both diagram and message responses.
+    - Correctly accumulates history across multiple calls with the same `chatId`.
+- **Frontend tests**
+  - Component tests for chat panel:
+    - User messages appear in the transcript.
+    - Assistant replies and diagram updates are rendered based on response type.
+    - Network failures are surfaced as user-visible errors in the chat.
+  - Component tests for diagram panel:
+    - Placeholder behavior when no diagram is present.
+    - Calls into Mermaid to render diagrams when a definition is provided.
+    - Graceful handling when Mermaid throws.
+- **Manual verification**
+  - Run both apps locally, then:
+    - Submit a prompt containing `"create"` and verify the diagram panel updates.
+    - Submit follow-up messages without `"create"` and confirm that only the chat transcript changes while the diagram remains.
+    - Refresh the page to confirm that history is per-session and resets on reload (new `chatId`).
+
+## AI Usage Tracking
+
+- **Purpose**
+  - Keep a lightweight, auditable record of how AI tooling is used during this assessment.
+- **Where to track**
+  - Use `notes/ai-usage.md` as the single source of truth.
+  - Append a new row to the "Prompts and Output Tracks" table for each meaningful AI interaction that changes code, docs, or design.
+- **What to record per row**
+  - **Date** of the interaction.
+  - **Prompt**: a short, human-readable summary (not the full transcript).
+  - **Implementation**: concise description of what changed (files, features, or docs touched).
+- **Scope and discipline**
+  - Do not paste long prompts or raw AI output into the table; link to design docs or READMEs instead.
+  - Aim for accuracy and brevity so reviewers can quickly understand how AI assisted the work.
