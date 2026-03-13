@@ -79,9 +79,6 @@ export function DiagramPanel({ diagram }: DiagramPanelProps) {
   }
 
   return (
-    <div
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '16px' }}
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
+    <div style={{ overflow: 'auto', height: '100%', padding: '16px' }} dangerouslySetInnerHTML={{ __html: svg }} />
   );
 }

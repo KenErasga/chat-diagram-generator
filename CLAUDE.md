@@ -141,18 +141,24 @@ Design Output format:
   - On each `POST /chat`, the backend:
     - Looks up existing turns for `chatId`.
     - Appends the latest user turn.
-    - Sends the full sequence of turns (including prior diagrams) to the stub provider.
+    - Sends the full sequence of turns (including prior diagrams) to the provider.
   - This ensures previously generated diagrams are available as part of the LLM context via the `diagram` field on assistant turns.
 
 ---
 
-## Stubbed Multi-Provider Backend Design
+## Multi-Provider Backend Design
 
 - **Provider abstraction**
   - A `ModelProvider` interface defines a single chat method that takes:
     - The full turn history (including any diagram metadata).
     - The latest user message.
   - Returns a normalized response consistent with the API contract above.
+- **Real provider**
+  - **`BedrockProvider`** (`MODEL_PROVIDER = "nova"`):
+    - Calls Amazon Nova via the AWS Bedrock ConverseCommand API.
+    - Uses the `create_diagram` tool to detect diagram intent and select the appropriate Mermaid diagram type (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie).
+    - Prior diagrams from assistant turns are embedded as fenced Mermaid code blocks in history, giving the model context to update them.
+    - Falls back to plain text when the model returns `stopReason: "end_turn"`.
 - **Stub implementations**
   - **Default stub**:
     - If the incoming message text (case-insensitive) contains `"create"`, returns:
@@ -165,10 +171,11 @@ Design Output format:
 - **Provider selection via environment**
   - Environment variable: `MODEL_PROVIDER`.
   - Behavior:
+    - `MODEL_PROVIDER = "nova"` → use `BedrockProvider` (Amazon Nova via Bedrock).
     - `MODEL_PROVIDER = "openai"` → use OpenAI stub.
     - `MODEL_PROVIDER = "anthropic"` → use Anthropic stub.
     - Any other value or unset → fall back to default stub.
-  - A small factory encapsulates this switch and is registered as the NestJS provider, making it easy to swap in a real implementation later.
+  - A small factory encapsulates this switch and is registered as the NestJS provider.
 
 ---
 
@@ -190,30 +197,33 @@ Design Output format:
 ## Implemented vs Future Work
 
 - **Implemented now**
-  - Split-screen Next.js frontend with chat and diagram panels.
+  - Split-screen Next.js frontend with chat and diagram panels; diagram panel scrolls on overflow.
   - NestJS backend with:
     - `POST /chat` controller and service.
     - In-memory history adapter behind a small interface.
-    - Stubbed multi-provider model layer driven by `MODEL_PROVIDER`.
+    - Multi-provider model layer driven by `MODEL_PROVIDER`.
+  - Real LLM integration: `BedrockProvider` using Amazon Nova via AWS Bedrock ConverseCommand API (`MODEL_PROVIDER=nova`).
+  - Smart diagram type selection — 7 Mermaid diagram types (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie) via `create_diagram` tool.
   - End-to-end flow:
-    - User sends a message → backend uses stubs to decide whether to return a diagram or plain text → frontend updates transcript and diagram panel accordingly.
+    - User sends a message → provider decides whether to return a diagram or plain text → frontend updates transcript and diagram panel accordingly.
   - Basic error handling on both frontend (network and rendering errors) and backend (invalid payloads, provider failures).
 - **Deliberately left for future improvements**
-  - Real LLM integrations (OpenAI, Anthropic, etc.) wired into the provider interface.
   - Streaming responses (server-sent events or WebSockets).
   - Persistent history store (e.g., database-backed adapter implementing the same history interface).
   - Authentication, multi-user support, and authorization.
-  - Additional diagram types beyond Mermaid flowcharts and UI affordances for diagram export.
+  - Real OpenAI and Anthropic provider integrations.
+  - Diagram export (PNG / SVG).
 
 ---
 
 ## Test Strategy (Current)
 
-- **Backend tests**
+- **Backend tests** (25 tests across 7 suites)
   - Unit tests for:
     - In-memory history adapter (ordering and initialization behavior).
-    - Provider factory (correct stub selection based on `MODEL_PROVIDER`).
+    - Provider factory (correct provider selection based on `MODEL_PROVIDER`).
     - Default stub logic (inputs with/without `"create"`).
+    - `BedrockProvider`: tool use → diagram, text → message, diagram history embedding, default model ID, SDK error propagation.
   - Integration-style tests verifying `POST /chat`:
     - Returns the expected shape for both diagram and message responses.
     - Correctly accumulates history across multiple calls with the same `chatId`.

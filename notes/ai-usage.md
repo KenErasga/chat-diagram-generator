@@ -14,6 +14,30 @@ This document describes how AI tooling was used during the development.
 - Claude Code scaffolded the NestJS and NextJS project structure, and implemented business logic following the agreed design.
 - All generated code was reviewed before being committed. Logic that diverged from the design or introduced unnecessary complexity was corrected.
 
+Claude was used as a structured assistant during development to help plan, validate, and refine the implementation.  
+The workflow followed an iterative loop:
+
+1. **Plan**
+   - Describe the problem and proposed solution.
+   - Ask Claude to help structure the approach and identify edge cases.
+
+2. **Verify the Plan**
+   - Review the proposed plan with Claude.
+   - Check assumptions, logic, and potential issues before implementation.
+
+3. **Update the Plan**
+   - Refine the plan based on feedback.
+   - Clarify steps, improve structure, and address any gaps.
+
+4. **Implement**
+   - Write the implementation based on the agreed plan.
+
+5. **Verify the Implementation**
+   - Review the implemented code with Claude.
+   - Validate correctness, identify bugs, and confirm the implementation matches the original plan.
+
+This iterative approach helped reduce implementation errors, clarify complex logic before coding, and ensure the final solution matched the intended design.
+
 ## Prompts and Output Tracks
 
 | Date       | Prompt                                                                                                         | Implementation                                                                                                                                                                                                                  |
@@ -36,3 +60,8 @@ This document describes how AI tooling was used during the development.
 | 2026-03-13 | Fix lint/format/test after chat-service refactor (moved stubs to ai-providers/, history to db-providers/)      | Deleted 8 dead stub/history files; removed debug console.log; fixed chat-app lint (eslint direct); extracted HTTP_CREATED, HTTP_BAD_REQUEST, SECOND_CALL constants to resolve no-magic-numbers violations; 27/27 tests pass     |
 | 2026-03-13 | Code review of chat-service; apply all findings                                                                | Added @HttpCode(201), global ValidationPipe+CORS in main.ts, @MaxLength to DTO, BaseStub+stub-fixtures dedup, health route, unknown-provider warning, moved orphaned specs, removed empty stubs/ and history/ dirs; 28/28 tests |
 | 2026-03-13 | Add NestJS Logger to chat-service                                                                              | Logger added to main.ts (startup), ChatService (entry/response/error), ai-provider.factory.ts (selection/warn), BaseStub (debug); 28/28 tests pass                                                                              |
+| 2026-03-13 | Implement AWS Bedrock AI providers (BedrockProvider, NovaProvider) with ConverseCommand API and shared base    | `base-bedrock.provider.ts`, `bedrock.provider.ts`, `nova.provider.ts`, `bedrock-test-fixtures.ts`, `bedrock.provider.spec.ts`, `nova.provider.spec.ts`; updated factory, factory spec, README; 31/31 tests pass                 |
+| 2026-03-13 | Remove BedrockProvider (Claude on Bedrock); keep only NovaProvider for real Bedrock calls                      | Deleted `bedrock.provider.ts` (Claude variant), removed `bedrock` factory case; 25/25 tests pass                                                                                                                                |
+| 2026-03-13 | Rename NovaProvider to BedrockProvider; use Nova as model ID                                                   | `nova.provider.ts` → `bedrock.provider.ts`, class `NovaProvider`→`BedrockProvider`, env var `NOVA_MODEL_ID`→`BEDROCK_MODEL_ID`; factory + spec updated; 25/25 tests pass                                                        |
+| 2026-03-13 | Add scrolling to diagram panel for large diagrams                                                              | `DiagramPanel.tsx` container style changed to `overflow: auto`; 9/9 tests pass                                                                                                                                                  |
+| 2026-03-13 | Update READMEs, CLAUDE.md, design.md, ai-usage.md to reflect current codebase                                  | All 6 doc files updated: root README, chat-service README, chat-app README, CLAUDE.md, notes/design.md, notes/ai-usage.md                                                                                                       |

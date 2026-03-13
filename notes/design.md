@@ -99,56 +99,58 @@ Backend looks up history by `chatId`; creates a new entry if not found.
 
 ---
 
-## 7. Stubbed Multi-Provider Backend
+## 7. Multi-Provider Backend
 
-**Environment variable:** `MODEL_PROVIDER` (e.g., `openai`, `anthropic`, `stub`)
+**Environment variable:** `MODEL_PROVIDER` (e.g., `nova`, `openai`, `anthropic`, `stub`, or unset)
 
 **Design:**
 
 - A `ModelProvider` interface defines a single `chat(messages, currentMessage)` method returning the structured response
-- Concrete stub implementations: `OpenAIStub`, `AnthropicStub`, `DefaultStub`
 - A factory selects the implementation based on `MODEL_PROVIDER` at startup (registered via NestJS DI)
-- All stubs share the same stub logic: if message contains "create" (case-insensitive), return a diagram; otherwise return a plain reply
-- Swapping to a real provider later only requires implementing the interface and updating the factory
 
-**Stub logic:**
+**Real provider:**
 
-- Message contains "create" (or similar keywords) → return a diagram tool call with a simple Mermaid flowchart
-- Otherwise → return a conversational reply acknowledging the user's message
+- `BedrockProvider` (`MODEL_PROVIDER=nova`): calls Amazon Nova via the AWS Bedrock ConverseCommand API; uses the `create_diagram` tool to select the appropriate Mermaid diagram type (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie) and return the definition; updates existing diagrams by embedding prior Mermaid definitions in history context
+
+**Stub implementations:** `OpenAIStub`, `AnthropicStub`, `DefaultStub`
+
+- All stubs share the same logic: if message contains "create" (case-insensitive), return a hardcoded Mermaid flowchart; otherwise return a plain reply
+- Adding another real provider requires implementing `IModelProvider` and adding a factory case
 
 ---
 
 ## 8. Diagram Rendering with Mermaid.js
 
 - Install `mermaid` as a frontend dependency
-- Render diagrams in a `<div>` using `mermaid.render()` or the `mermaid` React wrapper
+- Render diagrams in a `<div>` using `mermaid.render()` — dynamically imported inside a `useEffect` to avoid SSR issues
 - The diagram panel shows the most recently returned diagram definition
 - On each new diagram response, replace the previous diagram entirely
 - If the backend returns a `message` type (no diagram), the panel retains the last diagram
+- The panel uses `overflow: auto` so large diagrams scroll horizontally and vertically rather than overflowing the layout
 - Handle Mermaid parse errors gracefully — display an error state in the panel without crashing
 
 ---
 
 ## 9. Now vs Future
 
-**Implement now:**
+**Implemented:**
 
-- Split-screen UI with chat and diagram panels
+- Split-screen UI with chat and diagram panels (scrollable on overflow)
 - `POST /chat` endpoint with `chatId`; backend manages history via in-memory adapter
-- Mermaid.js diagram rendering
-- Stubbed multi-provider backend controlled by env var
+- Mermaid.js diagram rendering (7 diagram types via tool use with real LLM)
+- Real LLM provider: `BedrockProvider` using Amazon Nova via AWS Bedrock (`MODEL_PROVIDER=nova`)
+- Stub providers for local development (default, openai, anthropic)
 - Basic error handling (API errors, Mermaid parse errors)
-- Unit tests for stub logic and API contract
+- Unit and integration tests for all providers, factory, history adapter, and API contract
 
 **Leave for later:**
 
-- Real LLM provider integrations (OpenAI, Anthropic, Bedroc)
 - Streaming responses (SSE or WebSocket)
 - Swap in-memory history adapter for a database-backed implementation
 - Manual diagram editing
 - Authentication
 - Diagram export (PNG, SVG)
-- Multiple diagram types beyond flowcharts
+- Real OpenAI and Anthropic provider integrations
 
 ---
 

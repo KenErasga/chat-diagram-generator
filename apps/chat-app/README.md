@@ -72,3 +72,4 @@ All `/api/*` requests are proxied to `http://localhost:3001` via `next.config.ts
 - `chatId` is generated once per browser session and cached in `sessionStorage`. Closing the tab resets the conversation.
 - Mermaid is dynamically imported inside a `useEffect` — never at the module level — to avoid SSR issues.
 - The diagram panel retains the last rendered diagram when the backend returns a plain `message` response.
+- The diagram panel scrolls horizontally and vertically when a large diagram exceeds the panel bounds.

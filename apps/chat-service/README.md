@@ -1,6 +1,6 @@
 # chat-service
 
-NestJS 10 backend for Chat Diagram Generator. Exposes `POST /chat`, manages conversation history in memory keyed by `chatId`, and routes requests through a stub model provider.
+NestJS 10 backend for Chat Diagram Generator. Exposes `POST /chat`, manages conversation history in memory keyed by `chatId`, and routes requests through a configured model provider (stubs or real Amazon Nova via Bedrock).
 
 ---
 
@@ -48,25 +48,48 @@ Runs the compiled output from `dist/main.js`.
 npm test
 ```
 
-18 tests across 6 suites (Jest):
+25 tests across 7 suites (Jest):
 
-| Suite                                       | Tests                                           |
-| ------------------------------------------- | ----------------------------------------------- |
-| `app.controller.spec.ts`                    | Hello World GET /                               |
-| `chat/chat.controller.spec.ts`              | POST /chat integration (201, 400 validation)    |
-| `chat/chat.service.spec.ts`                 | History lookup, provider call, turn appending   |
-| `history/in-memory-history.adapter.spec.ts` | Isolation, append order, empty init             |
-| `providers/provider.factory.spec.ts`        | MODEL_PROVIDER env var routing                  |
-| `providers/stubs/default.stub.spec.ts`      | Stub logic: "create" → diagram, plain → message |
+| Suite                                                              | Tests                                                      |
+| ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `app.controller.spec.ts`                                           | Hello World GET /                                          |
+| `chat/chat.controller.spec.ts`                                     | POST /chat integration (201, 400 validation)               |
+| `chat/chat.service.spec.ts`                                        | History lookup, provider call, turn appending              |
+| `providers/db-providers/in-memory-db/in-memory-db.adapter.spec.ts` | Isolation, append order, empty init                        |
+| `providers/ai-providers/provider.factory.spec.ts`                  | MODEL_PROVIDER env var routing                             |
+| `providers/ai-providers/default.stub.spec.ts`                      | Stub logic: "create" → diagram, plain → message            |
+| `providers/ai-providers/bedrock.provider.spec.ts`                  | BedrockProvider: tool use, text, history, model ID, errors |
 
 ---
 
 ## Environment Variables
 
-| Variable         | Values                           | Default   | Description                |
-| ---------------- | -------------------------------- | --------- | -------------------------- |
-| `MODEL_PROVIDER` | `openai`, `anthropic`, _(unset)_ | `default` | Stub provider to use       |
-| `PORT`           | any port number                  | `3001`    | Port the server listens on |
+| Variable         | Values                                   | Default   | Description                |
+| ---------------- | ---------------------------------------- | --------- | -------------------------- |
+| `MODEL_PROVIDER` | `nova`, `openai`, `anthropic`, _(unset)_ | `default` | Provider to use            |
+| `PORT`           | any port number                          | `3001`    | Port the server listens on |
+
+The service uses Nest’s `ConfigModule.forRoot({ envFilePath: '.env.local', isGlobal: true })`, so environment variables are automatically loaded from `apps/chat-service/.env.local` on startup (and can still be overridden by shell env vars).
+
+Example `apps/chat-service/.env.local`:
+
+```bash
+MODEL_PROVIDER=nova
+```
+
+### Bedrock / Nova provider
+
+When `MODEL_PROVIDER=nova`, the service uses `BedrockProvider` which calls the AWS Bedrock ConverseCommand API via `@aws-sdk/client-bedrock-runtime`. Standard AWS credential resolution applies (environment variables, `~/.aws/credentials`, instance profile, etc.).
+
+| Variable                | Description                                     | Default                |
+| ----------------------- | ----------------------------------------------- | ---------------------- |
+| `AWS_REGION`            | AWS region for Bedrock API calls                | `us-east-1`            |
+| `AWS_ACCESS_KEY_ID`     | AWS access key ID (standard SDK credential)     | _(resolved by SDK)_    |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret access key (standard SDK credential) | _(resolved by SDK)_    |
+| `AWS_SESSION_TOKEN`     | AWS session token for temporary credentials     | _(resolved by SDK)_    |
+| `BEDROCK_MODEL_ID`      | Model ID used by `BedrockProvider`              | `amazon.nova-pro-v1:0` |
+
+The IAM principal used must have `bedrock:InvokeModel` permission on the target model ARN (e.g. `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0`).
 
 ---
 
@@ -120,20 +143,11 @@ src/
   providers/
     model-provider.interface.ts  IModelProvider + MODEL_PROVIDER_TOKEN
     ai-providers/
-      ai-provider.factory.ts     Reads MODEL_PROVIDER env var, returns stub
+      ai-provider.factory.ts     Reads MODEL_PROVIDER env var, returns BedrockProvider or stub
+      base-bedrock.provider.ts   Abstract base: ConverseCommand, tool config, history mapping
+      bedrock.provider.ts        BedrockProvider — Amazon Nova via Bedrock (MODEL_PROVIDER=nova)
       default.stub.ts
       openai.stub.ts
       anthropic.stub.ts
     providers.module.ts
 ```
-
----
-
-## Adding a Real Provider
-
-1. Create `src/providers/real/your-provider.ts` implementing `IModelProvider`:
-   ```ts
-   async chat(history: Turn[], message: string): Promise<ChatResponseDto>
-   ```
-2. Register it in `provider.factory.ts` under a new `MODEL_PROVIDER` value.
-3. Add the provider's SDK to `dependencies` in `package.json`.

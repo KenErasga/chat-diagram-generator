@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { ChatModule } from './chat/chat.module';
 
-@Module({ imports: [ChatModule], controllers: [AppController] })
+@Module({
+  imports: [ConfigModule.forRoot({ envFilePath: '.env.local', isGlobal: true }), ChatModule],
+  controllers: [AppController]
+})
 export class AppModule {}
