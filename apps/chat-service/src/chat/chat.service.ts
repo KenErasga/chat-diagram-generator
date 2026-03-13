@@ -29,7 +29,12 @@ export class ChatService {
     try {
       response = await this.modelProvider.chat(history, dto.message);
     } catch (err) {
-      this.logger.error(`Provider failed for chatId="${dto.chatId}"`, err instanceof Error ? err.stack : String(err));
+      if (err instanceof Error) {
+        this.logger.error(`Provider failed for chatId="${dto.chatId}": ${err.message}`, err.stack);
+      } else {
+        this.logger.error(`Provider failed for chatId="${dto.chatId}"`, String(err));
+      }
+
       throw err;
     }
 

@@ -9,8 +9,8 @@ import {
 import type { ChatResponseDto } from '../../chat/dto/chat-response.dto';
 import type { IModelProvider } from '../model-provider.interface';
 import type { Turn } from '../db-providers/in-memory-db/turn.type';
+import { getAwsRegion } from './config';
 
-const DEFAULT_AWS_REGION = 'us-east-1';
 const MAX_TOKENS = 4096;
 
 const CREATE_DIAGRAM_TOOL_CONFIG: ToolConfiguration = {
@@ -63,7 +63,7 @@ export abstract class BaseBedrockProvider implements IModelProvider {
 
   constructor() {
     this.client = new BedrockRuntimeClient({
-      region: process.env.AWS_REGION ?? DEFAULT_AWS_REGION
+      region: getAwsRegion()
     });
   }
 
@@ -85,7 +85,12 @@ export abstract class BaseBedrockProvider implements IModelProvider {
         })
       );
     } catch (err) {
-      this.logger.error('ConverseCommand failed', err);
+      if (err instanceof Error) {
+        this.logger.error(`ConverseCommand failed: ${err.message}`, err.stack);
+      } else {
+        this.logger.error('ConverseCommand failed with non-Error value', String(err));
+      }
+
       throw err;
     }
 
