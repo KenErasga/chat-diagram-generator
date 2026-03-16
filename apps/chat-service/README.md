@@ -48,17 +48,17 @@ Runs the compiled output from `dist/main.js`.
 npm test
 ```
 
-25 tests across 7 suites (Jest):
+32 tests across 7 suites (Jest):
 
-| Suite                                                              | Tests                                                      |
-| ------------------------------------------------------------------ | ---------------------------------------------------------- |
-| `app.controller.spec.ts`                                           | Hello World GET /                                          |
-| `chat/chat.controller.spec.ts`                                     | POST /chat integration (201, 400 validation)               |
-| `chat/chat.service.spec.ts`                                        | History lookup, provider call, turn appending              |
-| `providers/db-providers/in-memory-db/in-memory-db.adapter.spec.ts` | Isolation, append order, empty init                        |
-| `providers/ai-providers/provider.factory.spec.ts`                  | MODEL_PROVIDER env var routing                             |
-| `providers/ai-providers/default.stub.spec.ts`                      | Stub logic: "create" → diagram, plain → message            |
-| `providers/ai-providers/bedrock.provider.spec.ts`                  | BedrockProvider: tool use, text, history, model ID, errors |
+| Suite                                                              | Tests                                                                                |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `app.controller.spec.ts`                                           | Hello World GET /                                                                    |
+| `chat/chat.controller.spec.ts`                                     | POST /chat (201, 400 validation, diagram response), GET /chat, GET /chat/:chatId     |
+| `chat/chat.service.spec.ts`                                        | History lookup, provider call, message appending, diagram message, error propagation |
+| `providers/db-providers/in-memory-db/in-memory-db.adapter.spec.ts` | Isolation, append order, empty init, getAll (empty and populated)                    |
+| `providers/ai-providers/provider.factory.spec.ts`                  | MODEL_PROVIDER env var routing                                                       |
+| `providers/ai-providers/default.stub.spec.ts`                      | Stub logic: "create" → diagram, plain → message                                      |
+| `providers/ai-providers/bedrock.provider.spec.ts`                  | BedrockProvider: tool use, text, history, model ID, errors                           |
 
 ---
 
@@ -120,6 +120,46 @@ The IAM principal used must have `bedrock:InvokeModel` permission on the target 
 
 ---
 
+### `GET /chat`
+
+Returns all chat sessions and their message histories.
+
+**Response body:**
+
+```json
+{
+  "chats": [
+    {
+      "chatId": "550e8400-e29b-41d4-a716-446655440000",
+      "messages": [
+        { "role": "user", "content": "Create a flowchart" },
+        { "role": "ai", "content": "Here is your diagram.", "diagram": "flowchart TD\n  A --> B" }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### `GET /chat/:chatId`
+
+Returns the message history for a single chat session. Returns an empty `messages` array if the `chatId` is unknown.
+
+**Response body:**
+
+```json
+{
+  "chatId": "550e8400-e29b-41d4-a716-446655440000",
+  "messages": [
+    { "role": "user", "content": "Create a flowchart" },
+    { "role": "ai", "content": "Here is your diagram.", "diagram": "flowchart TD\n  A --> B" }
+  ]
+}
+```
+
+---
+
 ## Key Files
 
 ```
@@ -127,19 +167,20 @@ src/
   main.ts                        Bootstrap — listens on PORT (default 3001)
   app.module.ts                  Root module — imports ChatModule
   chat/
-    chat.controller.ts           POST /chat route
+    chat.controller.ts           POST /chat, GET /chat, GET /chat/:chatId routes
     chat.service.ts              Orchestrates history lookup + provider call
     chat.module.ts
     dto/
-      chat-request.dto.ts        { chatId, message } with class-validator
-      chat-response.dto.ts       { type, content, diagram? }
+      chat-request.dto.ts          { chatId, message } with class-validator
+      chat-response.dto.ts         { type, content, diagram? }
+      chat-history-response.dto.ts { chatId, messages } and { chats } for GET endpoints
   providers/
     db-providers/
       in-memory-db/
         in-memory-db.adapter.interface.ts IInMemoryDbAdapter + IN_MEMORY_DB_ADAPTER token
-        in-memory-db.adapter.ts           Map<chatId, Turn[]> implementation
+        in-memory-db.adapter.ts           Map<chatId, Message[]> implementation
         in-memory-db.module.ts            Exposes IN_MEMORY_DB_ADAPTER for injection
-        turn.type.ts                      { role, content, diagram? }
+        message.type.ts                   { role, content, diagram? }
   providers/
     model-provider.interface.ts  IModelProvider + MODEL_PROVIDER_TOKEN
     ai-providers/

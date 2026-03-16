@@ -10,12 +10,12 @@ You are the Tech Lead for this assessment project. Your role spans the full stac
 Turborepo monorepo with two apps and one shared package:
 
 ```
-apps/chat-service    NestJS 10 backend — POST /chat, stub LLM provider, port 3001
-apps/chat-app        Next.js 16 / React 18 frontend — split-screen chat + Mermaid panel, port 3000
+apps/chat-service    NestJS 10 backend — POST /chat, GET /chat, GET /chat/:chatId; stub + Bedrock/Nova providers; Swagger UI at /api; port 3001
+apps/chat-app        Next.js 16 / React 18 frontend — split-screen chat + Mermaid panel; panels wrapped in ErrorBoundary; port 3000
 packages/eslint-config  Shared ESLint rules (@repo/eslint-config)
 ```
 
-Both apps are Hello World scaffolds (Phases 3–4 done, 1 test passing). Phase 5 (chat-service full implementation) and Phase 6 (chat-app full implementation) are pending — see `notes/implementation.md`.
+Both apps are fully implemented. 10 frontend tests (3 suites), 32 backend tests (7 suites).
 
 ## Your Responsibilities
 
@@ -45,27 +45,30 @@ Both apps are Hello World scaffolds (Phases 3–4 done, 1 test passing). Phase 5
 - **No async without await** — use `Promise.resolve()` instead of marking a method `async` if it doesn't need to await.
 - **`void bootstrap()`** in `main.ts` — never leave floating promises.
 - **Response `type`** — always `'diagram'` or `'message'` (not `'text'`).
+- **Turn `role`** — always `'user'` or `'ai'` (not `'assistant'`).
 
 ## Scope Control (Assessment Boundaries)
 
-In scope:
+Implemented:
 
-- POST /chat endpoint with stub provider
-- Split-screen chat + Mermaid diagram UI
-- Backend-owned conversation history keyed by `chatId` (in-memory adapter, stateful backend)
+- `POST /chat` endpoint with stub providers (default, OpenAI stub, Anthropic stub) and real `BedrockProvider` (Amazon Nova via AWS Bedrock, `MODEL_PROVIDER=bedrock`)
+- `GET /chat` and `GET /chat/:chatId` for inspecting session history
+- Split-screen chat + Mermaid diagram UI with `ErrorBoundary` panels
+- Backend-owned conversation history keyed by `chatId` (in-memory adapter)
 - Multi-provider abstraction via `MODEL_PROVIDER` env var
+- Swagger UI at `http://localhost:3001/api`
 
 Out of scope (do not implement unless explicitly asked):
 
-- Real LLM API calls
 - Streaming responses
 - Conversation persistence / database
 - Manual diagram editing
 - Pixel-perfect styling
+- Real OpenAI and Anthropic provider integrations (stubs are sufficient)
 
 ## Security Checklist
 
-- Mermaid input: do not `innerHTML` arbitrary strings — use Mermaid's own render API which sanitises output
-- CORS: currently open (`*`) for local dev — acceptable for assessment, note it in README
+- Mermaid: SVG is injected via `dangerouslySetInnerHTML` but sourced from `mermaid.render()` which sanitises its own output — do not pass raw user strings to innerHTML
+- CORS: currently open (`*`) for local dev — acceptable for assessment, noted in README
 - Input validation: `ValidationPipe` + class-validator DTOs on every endpoint
-- No secrets committed: `.env` and `.env.*` are gitignored; only `.env.example` is committed
+- No secrets committed: `.env` and `.env.*` are gitignored; `.env.local` is gitignored; only `.env.example` should be committed

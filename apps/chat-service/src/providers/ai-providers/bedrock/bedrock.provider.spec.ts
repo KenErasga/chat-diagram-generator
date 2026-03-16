@@ -8,7 +8,7 @@ jest.mock('@aws-sdk/client-bedrock-runtime', () => ({
 import { ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
 import { BedrockProvider } from './bedrock.provider';
 import { makeToolUseResponse, makeTextResponse } from './bedrock-test-fixtures';
-import type { Turn } from '../../db-providers/in-memory-db/turn.type';
+import type { Message } from '../../db-providers/in-memory-db/message.type';
 
 describe('BedrockProvider', () => {
   let provider: BedrockProvider;
@@ -43,11 +43,11 @@ describe('BedrockProvider', () => {
     expect(result.content).toBe(text);
   });
 
-  it('includes prior diagram as toolUse/toolResult blocks in history passed to ConverseCommand', async () => {
+  it('includes prior diagram as toolUse/toolResult blocks in messages passed to ConverseCommand', async () => {
     mockSend.mockResolvedValueOnce(makeTextResponse('Updated.'));
 
     const mermaidDef = 'flowchart TD\n  X --> Y';
-    const history: Turn[] = [
+    const history: Message[] = [
       { role: 'user', content: 'Create a chart' },
       { role: 'ai', content: 'Here is your diagram.', diagram: mermaidDef }
     ];

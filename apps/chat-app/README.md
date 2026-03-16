@@ -36,9 +36,9 @@ npm run build
 npm test
 ```
 
-9 tests across 3 suites (Jest + React Testing Library):
+10 tests across 3 suites (Jest + React Testing Library):
 
-- `src/lib/api.test.ts` — `postChat` fetch wrapper
+- `src/lib/api.test.ts` — `postChat` fetch wrapper (including timeout and non-OK response handling)
 - `src/components/ChatPanel.test.tsx` — message submission, response handling, error states
 - `src/components/DiagramPanel.test.tsx` — placeholder, Mermaid render, render error
 
@@ -50,12 +50,13 @@ npm test
 src/
   app/
     layout.tsx            Root layout and metadata
-    page.tsx              Split-screen page (ChatPanel + DiagramPanel)
+    page.tsx              Split-screen page (ChatPanel + DiagramPanel) wrapped in ErrorBoundary
   components/
     ChatPanel.tsx         Chat input, message history, calls POST /api/chat
     DiagramPanel.tsx      Mermaid renderer with placeholder and error states
+    ErrorBoundary.tsx     React error boundary — shows reload prompt on unhandled render errors
   lib/
-    api.ts                postChat() — typed fetch wrapper for POST /chat
+    api.ts                postChat() — typed fetch wrapper for POST /chat (30 s timeout)
     chat-id.ts            getChatId() — UUID per session, stored in sessionStorage
 ```
 

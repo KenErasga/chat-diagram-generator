@@ -87,8 +87,8 @@ describe('ChatController (integration)', () => {
 
   it('GET /chat returns all sessions from history adapter', async () => {
     const sessions = [
-      { chatId: 'session-1', turns: [{ role: 'user', content: 'hello' }] },
-      { chatId: 'session-2', turns: [] }
+      { chatId: 'session-1', messages: [{ role: 'user', content: 'hello' }] },
+      { chatId: 'session-2', messages: [] }
     ];
 
     mockHistoryAdapter.getAll.mockReturnValue(sessions);
@@ -99,24 +99,24 @@ describe('ChatController (integration)', () => {
     expect(response.body).toMatchObject({ chats: sessions });
   });
 
-  it('GET /chat/:chatId returns 200 with empty turns for unknown chatId', async () => {
+  it('GET /chat/:chatId returns 200 with empty messages for unknown chatId', async () => {
     const response = await request(app.getHttpServer()).get('/chat/unknown-id');
 
     expect(response.status).toBe(HttpStatus.OK);
-    expect(response.body).toMatchObject({ chatId: 'unknown-id', turns: [] });
+    expect(response.body).toMatchObject({ chatId: 'unknown-id', messages: [] });
   });
 
-  it('GET /chat/:chatId returns turns from history adapter', async () => {
-    const turns = [
+  it('GET /chat/:chatId returns messages from history adapter', async () => {
+    const messages = [
       { role: 'user', content: 'hello' },
       { role: 'ai', content: 'hi there' }
     ];
 
-    mockHistoryAdapter.get.mockReturnValue(turns);
+    mockHistoryAdapter.get.mockReturnValue(messages);
 
     const response = await request(app.getHttpServer()).get('/chat/my-session');
 
     expect(response.status).toBe(HttpStatus.OK);
-    expect(response.body).toMatchObject({ chatId: 'my-session', turns });
+    expect(response.body).toMatchObject({ chatId: 'my-session', messages });
   });
 });

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class TurnDto {
+export class MessageDto {
   @ApiProperty({ enum: ['user', 'ai'] })
   role!: 'user' | 'ai';
 
@@ -15,8 +15,8 @@ export class ChatHistoryResponseDto {
   @ApiProperty({ description: 'Chat session identifier' })
   chatId!: string;
 
-  @ApiProperty({ type: [TurnDto] })
-  turns!: TurnDto[];
+  @ApiProperty({ type: [MessageDto] })
+  messages!: MessageDto[];
 }
 
 export class ChatListResponseDto {

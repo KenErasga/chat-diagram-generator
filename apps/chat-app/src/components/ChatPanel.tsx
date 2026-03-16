@@ -5,6 +5,7 @@ import { getChatId } from '@/lib/chat-id';
 import { postChat } from '@/lib/api';
 
 interface DisplayMessage {
+  id: string;
   role: 'user' | 'ai' | 'error';
   content: string;
 }
@@ -13,44 +14,54 @@ interface ChatPanelProps {
   onDiagram: (def: string) => void;
 }
 
+let messageCounter = 0;
+
+function nextId(): string {
+  messageCounter += 1;
+
+  return String(messageCounter);
+}
+
 export function ChatPanel({ onDiagram }: ChatPanelProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submitMessage(text: string) {
+    if (!text) return;
 
-    const text = input.trim();
-
-    if (!text) {
-      return;
-    }
-
-    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    setMessages(prev => [...prev, { id: nextId(), role: 'user', content: text }]);
     setInput('');
     setLoading(true);
 
     try {
       const response = await postChat({ chatId: getChatId(), message: text });
 
-      setMessages(prev => [...prev, { role: 'ai', content: response.content }]);
+      setMessages(prev => [...prev, { id: nextId(), role: 'ai', content: response.content }]);
 
       if (response.type === 'diagram' && response.diagram) {
         onDiagram(response.diagram);
       }
     } catch {
-      setMessages(prev => [...prev, { role: 'error', content: 'Failed to send message. Please try again.' }]);
+      setMessages(prev => [
+        ...prev,
+        { id: nextId(), role: 'error', content: 'Failed to send message. Please try again.' }
+      ]);
     } finally {
       setLoading(false);
     }
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    void submitMessage(input.trim());
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRight: '1px solid #ccc' }}>
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-        {messages.map((msg, i) => (
-          <div key={i} style={{ marginBottom: '12px', textAlign: msg.role === 'user' ? 'right' : 'left' }}>
+        {messages.map(msg => (
+          <div key={msg.id} style={{ marginBottom: '12px', textAlign: msg.role === 'user' ? 'right' : 'left' }}>
             <span
               style={{
                 display: 'inline-block',
@@ -67,6 +78,8 @@ export function ChatPanel({ onDiagram }: ChatPanelProps) {
       </div>
       <form onSubmit={handleSubmit} style={{ padding: '16px', borderTop: '1px solid #ccc' }}>
         <textarea
+          id="chat-input"
+          aria-label="Describe a diagram or ask a question"
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Describe a diagram or ask a question..."
@@ -76,13 +89,14 @@ export function ChatPanel({ onDiagram }: ChatPanelProps) {
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              handleSubmit(e as unknown as React.FormEvent);
+              void submitMessage(input.trim());
             }
           }}
         />
         <button
           type="submit"
           disabled={loading || !input.trim()}
+          aria-label={loading ? 'Sending message' : 'Send message'}
           style={{ marginTop: '8px', padding: '8px 16px', cursor: loading ? 'not-allowed' : 'pointer' }}
         >
           {loading ? 'Sending...' : 'Send'}

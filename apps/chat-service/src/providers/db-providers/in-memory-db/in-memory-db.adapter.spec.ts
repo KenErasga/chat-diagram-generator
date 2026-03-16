@@ -1,7 +1,7 @@
 import { InMemoryDbAdapter } from './in-memory-db.adapter';
-import type { Turn } from './turn.type';
+import type { Message } from './message.type';
 
-describe('InMemoryHistoryAdapter', () => {
+describe('InMemoryDbAdapter', () => {
   let adapter: InMemoryDbAdapter;
 
   beforeEach(() => {
@@ -12,22 +12,22 @@ describe('InMemoryHistoryAdapter', () => {
     expect(adapter.get('new-id')).toEqual([]);
   });
 
-  it('returns the appended turn after append', () => {
-    const turn: Turn = { role: 'user', content: 'hello' };
+  it('returns the appended message after append', () => {
+    const message: Message = { role: 'user', content: 'hello' };
 
-    adapter.append('chat-1', turn);
+    adapter.append('chat-1', message);
 
-    expect(adapter.get('chat-1')).toEqual([turn]);
+    expect(adapter.get('chat-1')).toEqual([message]);
   });
 
-  it('accumulates multiple turns in order', () => {
-    const userTurn: Turn = { role: 'user', content: 'hello' };
-    const assistantTurn: Turn = { role: 'ai', content: 'hi there' };
+  it('accumulates multiple messages in order', () => {
+    const userMessage: Message = { role: 'user', content: 'hello' };
+    const assistantMessage: Message = { role: 'ai', content: 'hi there' };
 
-    adapter.append('chat-1', userTurn);
-    adapter.append('chat-1', assistantTurn);
+    adapter.append('chat-1', userMessage);
+    adapter.append('chat-1', assistantMessage);
 
-    expect(adapter.get('chat-1')).toEqual([userTurn, assistantTurn]);
+    expect(adapter.get('chat-1')).toEqual([userMessage, assistantMessage]);
   });
 
   it('keeps histories isolated per chatId', () => {
@@ -42,21 +42,21 @@ describe('InMemoryHistoryAdapter', () => {
     expect(adapter.getAll()).toEqual([]);
   });
 
-  it('getAll returns all chatIds with their turns', () => {
-    const turn1: Turn = { role: 'user', content: 'hello' };
-    const turn2: Turn = { role: 'user', content: 'world' };
+  it('getAll returns all chatIds with their messages', () => {
+    const message1: Message = { role: 'user', content: 'hello' };
+    const message2: Message = { role: 'user', content: 'world' };
     const TWO_SESSIONS = 2;
 
-    adapter.append('chat-1', turn1);
-    adapter.append('chat-2', turn2);
+    adapter.append('chat-1', message1);
+    adapter.append('chat-2', message2);
 
     const result = adapter.getAll();
 
     expect(result).toHaveLength(TWO_SESSIONS);
     expect(result).toEqual(
       expect.arrayContaining([
-        { chatId: 'chat-1', turns: [turn1] },
-        { chatId: 'chat-2', turns: [turn2] }
+        { chatId: 'chat-1', messages: [message1] },
+        { chatId: 'chat-2', messages: [message2] }
       ])
     );
   });

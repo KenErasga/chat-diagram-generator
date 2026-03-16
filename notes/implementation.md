@@ -160,26 +160,34 @@ Files: `src/chat/`
 
 Files: `src/providers/db-providers/in-memory-db/`
 
-- `turn.type.ts` — `{ role: 'user' | 'assistant'; content: string; diagram?: string }`
+- `turn.type.ts` — `{ role: 'user' | 'ai'; content: string; diagram?: string }`
 - `in-memory-db.adapter.interface.ts` — `IInMemoryDbAdapter`:
   - `get(chatId: string): Turn[]`
   - `append(chatId: string, turn: Turn): void`
 - `in-memory-db.adapter.ts` — implements `IInMemoryDbAdapter` using `Map<string, Turn[]>`; creates empty array for unknown `chatId`
 - `in-memory-db.module.ts` — provides `InMemoryDbAdapter` under the token `IN_MEMORY_DB_ADAPTER`, exports it
 
-### Step 16 — Provider stubs
+### Step 16 — Provider stubs and Bedrock provider
 
 Files: `src/providers/`
 
 - `model-provider.interface.ts` — `IModelProvider`:
   - `chat(history: Turn[], message: string): Promise<ChatResponseDto>`
-- `ai-providers/default.stub.ts` — if `message.toLowerCase().includes('create')` → return diagram with hardcoded Mermaid flowchart; else → plain reply
-- `ai-providers/openai.stub.ts` — same stub logic, different class name
-- `ai-providers/anthropic.stub.ts` — same stub logic, different class name
-- `ai-providers/ai-provider.factory.ts` — reads `process.env.MODEL_PROVIDER`; returns matching stub; registered as NestJS provider
+- `ai-providers/config.ts` — shared configuration helpers:
+  - `getAwsRegion()` — resolves `AWS_REGION` with a default
+  - `getBedrockModelId()` — resolves `BEDROCK_MODEL_ID` with a default
+- `ai-providers/stubs/base.stub.ts` — shared stub implementation:
+  - if `message.toLowerCase().includes('create')` → return diagram with hardcoded Mermaid flowchart; else → plain reply
+- `ai-providers/stubs/default.stub.ts` — default stub provider
+- `ai-providers/stubs/openai.stub.ts` — OpenAI-named stub provider
+- `ai-providers/stubs/anthropic.stub.ts` — Anthropic-named stub provider
+- `ai-providers/bedrock/base-bedrock.provider.ts` — abstract base for Bedrock providers; owns ConverseCommand call, tool config, history mapping
+- `ai-providers/bedrock/bedrock.provider.ts` — concrete `BedrockProvider` using Amazon Nova via Bedrock when `MODEL_PROVIDER=bedrock`
+- `ai-providers/ai-provider.factory.ts` — reads `process.env.MODEL_PROVIDER`; returns matching stub or `BedrockProvider`; registered as NestJS provider
 
 Environment variable:
 
+- `MODEL_PROVIDER=bedrock` → `BedrockProvider`
 - `MODEL_PROVIDER=openai` → `OpenAIStub`
 - `MODEL_PROVIDER=anthropic` → `AnthropicStub`
 - unset or anything else → `DefaultStub`
@@ -189,10 +197,12 @@ Environment variable:
 Files: `src/**/*.spec.ts` + `jest.config.ts`
 
 - `jest.config.ts`: use `ts-jest`, `testRegex: '.*\\.spec\\.ts$'`
-- `default.stub.spec.ts` — message with "create" → type `'diagram'`; plain message → type `'message'`
-- `provider.factory.spec.ts` — `MODEL_PROVIDER=openai` → `OpenAIStub`; unset → `DefaultStub`
-- `in-memory-history.adapter.spec.ts` — new chatId → `[]`; after `append` → turn present; multiple turns accumulate in order
-- `chat.controller.spec.ts` — integration via `@nestjs/testing`; `POST /chat` returns `200` with correct shape; two calls with same `chatId` show accumulated history
+- `providers/db-providers/in-memory-db/in-memory-db.adapter.spec.ts` — new chatId → `[]`; after `append` → turn present; multiple turns accumulate in order; histories are isolated per `chatId`
+- `providers/ai-providers/stubs/default.stub.spec.ts` — message with \"create\" → type `'diagram'`; plain message → type `'message'`; handles non-empty history
+- `providers/ai-providers/provider.factory.spec.ts` — `MODEL_PROVIDER=bedrock` → `BedrockProvider`; `openai` → `OpenAIStub`; `anthropic` → `AnthropicStub`; unset/unknown → `DefaultStub`
+- `providers/ai-providers/bedrock/bedrock.provider.spec.ts` — BedrockProvider: tool-use responses, plain text responses, history mapping (including prior diagrams), model ID defaulting, and error propagation
+- `chat/chat.service.spec.ts` — verifies history lookup, provider call, turn appending (including diagram metadata)
+- `chat/chat.controller.spec.ts` — integration via `@nestjs/testing`; `POST /chat` returns 201 with correct shape; diagram vs message responses; `GET /chat` and `GET /chat/:chatId` return histories from the adapter
 
 ---
 

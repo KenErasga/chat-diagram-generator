@@ -52,7 +52,7 @@ export class ChatService {
   }
 
   getHistory(chatId: string): ChatHistoryResponseDto {
-    return { chatId, turns: this.historyAdapter.get(chatId) };
+    return { chatId, messages: this.historyAdapter.get(chatId) };
   }
 
   getAllChats(): ChatListResponseDto {

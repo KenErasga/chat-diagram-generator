@@ -2,7 +2,7 @@ import { ChatService } from './chat.service';
 import type { ChatResponseDto } from './dto/chat-response.dto';
 import type { IInMemoryDbAdapter } from '../providers/db-providers/in-memory-db/in-memory-db.adapter.interface';
 import type { IModelProvider } from '../providers/model-provider.interface';
-import type { Turn } from '../providers/db-providers/in-memory-db/turn.type';
+import type { Message } from '../providers/db-providers/in-memory-db/message.type';
 
 const SECOND_CALL = 2;
 
@@ -17,8 +17,8 @@ describe('ChatService', () => {
     service = new ChatService(historyAdapter, modelProvider);
   });
 
-  it('fetches history, calls provider, appends both turns, and returns response', async () => {
-    const existingHistory: Turn[] = [{ role: 'user', content: 'prior message' }];
+  it('fetches history, calls provider, appends both messages, and returns response', async () => {
+    const existingHistory: Message[] = [{ role: 'user', content: 'prior message' }];
     const mockResponse: ChatResponseDto = { type: 'message', content: 'hi there' };
 
     historyAdapter.get.mockReturnValue(existingHistory);
@@ -37,7 +37,7 @@ describe('ChatService', () => {
     expect(result).toBe(mockResponse);
   });
 
-  it('appends diagram to assistant turn when response includes diagram', async () => {
+  it('appends diagram to assistant message when response includes diagram', async () => {
     const mockResponse: ChatResponseDto = {
       type: 'diagram',
       content: 'Here is your diagram.',
@@ -54,5 +54,13 @@ describe('ChatService', () => {
       content: 'Here is your diagram.',
       diagram: 'flowchart TD\n  A --> B'
     });
+  });
+
+  it('re-throws provider errors without appending to history', async () => {
+    historyAdapter.get.mockReturnValue([]);
+    modelProvider.chat.mockRejectedValue(new Error('Provider down'));
+
+    await expect(service.handleMessage({ chatId: 'abc', message: 'hello' })).rejects.toThrow('Provider down');
+    expect(historyAdapter.append).not.toHaveBeenCalled();
   });
 });

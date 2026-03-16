@@ -25,10 +25,12 @@
 
 **chat-service** Backend NestJS API server
 
-- Single `/chat` endpoint
-- Have a map of converstation history with an ID to keep track of (put it in as an adapter, might add a database in the future)
-- Receives current message
-- Selects provider stub via `MODEL_PROVIDER` env var
+- `POST /chat` — handle a message and return a diagram or plain reply
+- `GET /chat` — list all chat sessions and their histories
+- `GET /chat/:chatId` — return the history for a single session
+- Keeps a map of conversation history keyed by `chatId` behind an adapter (database-ready for the future)
+- Receives the current message (and `chatId`)
+- Selects a model provider via `MODEL_PROVIDER` env var
 - Returns either a diagram definition or a plain text reply
 
 **packages** Shared packages
@@ -77,6 +79,11 @@ Backend looks up history by `chatId`; creates a new entry if not found.
 - `content`: plain text reply (always present)
 - `diagram` (optional): Mermaid definition string, present only when `type` is `"diagram"`
 
+**History endpoints:**
+
+- `GET /chat` → `{ chats: { chatId, turns }[] }`
+- `GET /chat/:chatId` → `{ chatId, turns }` for a single session
+
 ---
 
 ## 5. Conversation Context
@@ -112,9 +119,10 @@ Backend looks up history by `chatId`; creates a new entry if not found.
 
 - `BedrockProvider` (`MODEL_PROVIDER=bedrock`): calls Amazon Nova via the AWS Bedrock ConverseCommand API; uses the `create_diagram` tool to select the appropriate Mermaid diagram type (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie) and return the definition; updates existing diagrams by embedding prior Mermaid definitions in history context
 
-**Stub implementations:** `OpenAIStub`, `AnthropicStub`, `DefaultStub`
+**Stub implementations:** `DefaultStub`, `OpenAIStub`, `AnthropicStub`
 
 - All stubs share the same logic: if message contains "create" (case-insensitive), return a hardcoded Mermaid flowchart; otherwise return a plain reply
+- Stub providers live under `providers/ai-providers/stubs`
 - Adding another real provider requires implementing `IModelProvider` and adding a factory case
 
 ---

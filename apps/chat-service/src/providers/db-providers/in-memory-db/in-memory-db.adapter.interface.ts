@@ -1,9 +1,9 @@
-import type { Turn } from './turn.type';
+import type { Message } from './message.type';
 
 export const IN_MEMORY_DB_ADAPTER = 'IN_MEMORY_DB_ADAPTER';
 
 export interface IInMemoryDbAdapter {
-  get(chatId: string): Turn[];
-  getAll(): Array<{ chatId: string; turns: Turn[] }>;
-  append(chatId: string, turn: Turn): void;
+  get(chatId: string): Message[];
+  getAll(): Array<{ chatId: string; messages: Message[] }>;
+  append(chatId: string, message: Message): void;
 }

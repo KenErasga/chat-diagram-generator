@@ -1,5 +1,5 @@
 import { DefaultStub } from './default.stub';
-import type { Turn } from '../../db-providers/in-memory-db/turn.type';
+import type { Message } from '../../db-providers/in-memory-db/message.type';
 
 describe('DefaultStub', () => {
   const stub = new DefaultStub();
@@ -26,7 +26,7 @@ describe('DefaultStub', () => {
   });
 
   it('does not break when non-empty history is provided', async () => {
-    const history: Turn[] = [
+    const history: Message[] = [
       { role: 'user', content: 'prior message' },
       { role: 'ai', content: 'prior reply' }
     ];

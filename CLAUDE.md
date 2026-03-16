@@ -98,7 +98,7 @@ Design Output format:
   - `apps/chat-service`: NestJS backend exposing a `POST /chat` endpoint.
   - `packages/eslint-config`: Shared ESLint configuration.
 - **Backend responsibilities**
-  - Owns conversation history and message turns.
+  - Owns conversation history and messages.
   - Selects a model provider based on environment (`MODEL_PROVIDER`) and delegates chat completion to that provider.
   - Returns a normalized response indicating whether the result is a plain message or a diagram (plus Mermaid definition when applicable).
 - **Frontend responsibilities**
@@ -129,20 +129,20 @@ Design Output format:
 
 ## Conversation Context & History Representation
 
-- **Turn model**
-  - A turn contains:
-    - `role`: `"user"` or `"assistant"`.
+- **Message model**
+  - A message contains:
+    - `role`: `"user"` or `"ai"`.
     - `content`: string — message text.
-    - `diagram` (optional): string — Mermaid definition associated with that turn, when present.
+    - `diagram` (optional): string — Mermaid definition associated with that message, when present.
 - **History storage**
-  - In-memory adapter: a map from `chatId` to an ordered array of turns.
-  - New conversations start with an empty history; turns are appended after each request/response cycle.
+  - In-memory adapter: a map from `chatId` to an ordered array of messages.
+  - New conversations start with an empty history; messages are appended after each request/response cycle.
 - **Context passed to provider**
   - On each `POST /chat`, the backend:
-    - Looks up existing turns for `chatId`.
-    - Appends the latest user turn.
-    - Sends the full sequence of turns (including prior diagrams) to the provider.
-  - This ensures previously generated diagrams are available as part of the LLM context via the `diagram` field on assistant turns.
+    - Looks up existing messages for `chatId`.
+    - Appends the latest user message.
+    - Sends the full sequence of messages (including prior diagrams) to the provider.
+  - This ensures previously generated diagrams are available as part of the LLM context via the `diagram` field on assistant messages.
 
 ---
 
@@ -150,14 +150,14 @@ Design Output format:
 
 - **Provider abstraction**
   - A `ModelProvider` interface defines a single chat method that takes:
-    - The full turn history (including any diagram metadata).
+    - The full message history (including any diagram metadata).
     - The latest user message.
   - Returns a normalized response consistent with the API contract above.
 - **Real provider**
   - **`BedrockProvider`** (`MODEL_PROVIDER = "bedrock"`):
     - Calls Amazon Nova via the AWS Bedrock ConverseCommand API.
     - Uses the `create_diagram` tool to detect diagram intent and select the appropriate Mermaid diagram type (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie).
-    - Prior diagrams from assistant turns are embedded as fenced Mermaid code blocks in history, giving the model context to update them.
+    - Prior diagrams from assistant messages are embedded as tool use/result blocks in history, giving the model context to update them.
     - Falls back to plain text when the model returns `stopReason: "end_turn"`.
 - **Stub implementations**
   - **Default stub**:
@@ -199,14 +199,14 @@ Design Output format:
 - **Implemented now**
   - Split-screen Next.js frontend with chat and diagram panels; diagram panel scrolls on overflow.
   - NestJS backend with:
-    - `POST /chat` controller and service.
+    - `POST /chat`, `GET /chat`, and `GET /chat/:chatId` controller and service.
     - In-memory history adapter behind a small interface.
     - Multi-provider model layer driven by `MODEL_PROVIDER`.
   - Real LLM integration: `BedrockProvider` using Amazon Nova via AWS Bedrock ConverseCommand API (`MODEL_PROVIDER=bedrock`).
   - Smart diagram type selection — 7 Mermaid diagram types (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt, pie) via `create_diagram` tool.
   - End-to-end flow:
     - User sends a message → provider decides whether to return a diagram or plain text → frontend updates transcript and diagram panel accordingly.
-  - Basic error handling on both frontend (network and rendering errors) and backend (invalid payloads, provider failures).
+  - Basic error handling on both frontend (network/timeout errors, `ErrorBoundary` for render failures, Mermaid render errors) and backend (invalid payloads, provider failures).
 - **Deliberately left for future improvements**
   - Streaming responses (server-sent events or WebSockets).
   - Persistent history store (e.g., database-backed adapter implementing the same history interface).
@@ -218,15 +218,17 @@ Design Output format:
 
 ## Test Strategy (Current)
 
-- **Backend tests** (25 tests across 7 suites)
+- **Backend tests** (32 tests across 7 suites)
   - Unit tests for:
-    - In-memory history adapter (ordering and initialization behavior).
+    - In-memory history adapter (ordering, initialization, getAll behavior).
     - Provider factory (correct provider selection based on `MODEL_PROVIDER`).
     - Default stub logic (inputs with/without `"create"`).
     - `BedrockProvider`: tool use → diagram, text → message, diagram history embedding, default model ID, SDK error propagation.
-  - Integration-style tests verifying `POST /chat`:
+    - `ChatService`: diagram message appending, error propagation.
+  - Integration-style tests verifying `POST /chat`, `GET /chat`, and `GET /chat/:chatId`:
     - Returns the expected shape for both diagram and message responses.
     - Correctly accumulates history across multiple calls with the same `chatId`.
+    - `GET /chat` returns all sessions; `GET /chat/:chatId` returns messages for a session.
 - **Frontend tests**
   - Component tests for chat panel:
     - User messages appear in the transcript.

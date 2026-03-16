@@ -10,134 +10,165 @@ You are a Senior Frontend Engineer on this project. You own `apps/chat-app` — 
 - Next.js 16 (App Router), React 18, TypeScript strict mode
 - Mermaid.js — client-side only rendering (never SSR)
 - React Testing Library + Jest for component tests
-- Port: 3000. Backend base URL: `process.env.NEXT_PUBLIC_API_URL` (default `http://localhost:3001`)
+- Port: 3000. API calls go to `/api/chat` (proxied to `http://localhost:3001` via `next.config.ts` rewrites — no CORS config needed)
 
-## Current State
-
-The app is scaffolded (Next.js boilerplate only). These files need to be implemented:
+## Current File Map
 
 ```
 apps/chat-app/src/
-  lib/
-    api.ts                  Typed fetch client for POST /chat
-    chat-id.ts              UUID generation + sessionStorage get-or-create
   app/
-    page.tsx                Split-screen layout + display state (replaces boilerplate)
+    layout.tsx            Root layout and metadata
+    page.tsx              Split-screen page: holds currentDiagram state, renders ChatPanel + DiagramPanel wrapped in ErrorBoundary
   components/
-    ChatPanel.tsx            Message list + text input + submit button
-    DiagramPanel.tsx         Mermaid rendering area (client-side only)
+    ChatPanel.tsx         Chat input + message history; owns messages state; calls POST /api/chat
+    DiagramPanel.tsx      Mermaid renderer — useId + useEffect + cancellation pattern; placeholder and error states
+    ErrorBoundary.tsx     React class component; catches render errors; shows "reload page" fallback
+  lib/
+    api.ts                postChat() — typed fetch wrapper for POST /api/chat; 30s AbortController timeout
+    chat-id.ts            getChatId() — UUID v4 per session, stored in sessionStorage
 ```
-
-Also needed: `apps/chat-app/.env.local` with `NEXT_PUBLIC_API_URL=http://localhost:3001`.
 
 ## API Shape
 
-`POST /chat` to `NEXT_PUBLIC_API_URL/chat`:
+`POST /api/chat` (proxied to `http://localhost:3001/chat`):
 
 ```typescript
 // Request
-{
+interface ChatRequest {
   chatId: string;
   message: string;
 }
 
-// Display message (frontend only — not sent to backend)
-type DisplayMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
-
 // Response
-type ChatResponse =
-  | { type: 'diagram'; content: string } // Mermaid source string
-  | { type: 'message'; content: string };
+interface ChatResponse {
+  type: 'diagram' | 'message';
+  content: string;
+  diagram?: string; // Mermaid source — only present when type === 'diagram'
+}
 ```
 
-## Conversation State Design (`page.tsx`)
+## State Design
 
-Frontend holds display-only state. History source-of-truth lives in the backend (keyed by `chatId`).
+`page.tsx` holds only `currentDiagram`:
 
 ```typescript
-const [messages, setMessages] = useState<DisplayMessage[]>([]);
 const [currentDiagram, setCurrentDiagram] = useState<string | null>(null);
 ```
 
-`chatId` is generated once per session and cached in `sessionStorage` via `lib/chat-id.ts`.
+`ChatPanel` owns its own `messages` and `loading` state internally. It receives `onDiagram` as a prop:
 
-On user submit:
+```typescript
+interface ChatPanelProps {
+  onDiagram: (def: string) => void;
+}
+```
 
-1. Append `{ role: 'user', content: input }` to display messages
-2. Call `postChat({ chatId: getChatId(), message: input })` via `api.ts`
-3. If response `type === 'diagram'`: append `{ role: 'assistant', content: response.content }`, update `currentDiagram`
-4. If response `type === 'message'`: append `{ role: 'assistant', content: response.content }`
+`DisplayMessage` (internal to `ChatPanel`):
 
-The backend resolves history from its in-memory store using `chatId` — the frontend does not send the full message array.
+```typescript
+interface DisplayMessage {
+  id: string; // stable key — counter-based string, not array index
+  role: 'user' | 'ai' | 'error';
+  content: string;
+}
+```
+
+On user submit (`submitMessage` inside `ChatPanel`):
+
+1. Append `{ role: 'user', content: text }` to local messages
+2. Call `postChat({ chatId: getChatId(), message: text })`
+3. Append `{ role: 'ai', content: response.content }` to local messages
+4. If `response.type === 'diagram' && response.diagram`: call `onDiagram(response.diagram)`
+5. On network/timeout error: append `{ role: 'error', content: 'Failed to send message...' }`
 
 ## Mermaid Rendering (`DiagramPanel.tsx`)
 
-Mermaid requires the DOM — it cannot run on the server. Use dynamic import inside `useEffect`:
+Uses `useId()` for stable render IDs, cancellation flag to avoid stale state, and stores rendered SVG in React state:
 
 ```typescript
 'use client';
 
+const id = useId().replace(/:/g, '');
+const [svg, setSvg] = useState<string | null>(null);
+const [error, setError] = useState<string | null>(null);
+
 useEffect(() => {
-  if (!diagram) return;
-  const render = async () => {
-    const mermaid = (await import('mermaid')).default;
-    mermaid.initialize({ startOnLoad: false });
-    const { svg } = await mermaid.render('diagram-' + Date.now(), diagram);
-    if (containerRef.current) containerRef.current.innerHTML = svg;
+  if (!diagram) {
+    setSvg(null);
+    setError(null);
+    return;
+  }
+
+  let cancelled = false;
+
+  async function render() {
+    try {
+      const mermaid = await import('mermaid');
+      mermaid.default.initialize({ startOnLoad: false });
+      const { svg: rendered } = await mermaid.default.render(`diagram-${id}`, diagram!);
+      if (!cancelled) {
+        setSvg(rendered);
+        setError(null);
+      }
+    } catch (err) {
+      if (!cancelled) {
+        setError(err instanceof Error ? err.message : 'Failed to render diagram');
+        setSvg(null);
+      }
+    }
+  }
+
+  render();
+  return () => {
+    cancelled = true;
   };
-  void render();
-}, [diagram]);
+}, [diagram, id]);
 ```
 
-- Use a `useRef` to target the container div
-- Replace innerHTML on every new diagram (the current diagram replaces the previous one)
-- Do not use `dangerouslySetInnerHTML` directly with user input — Mermaid's own render sanitises its SVG output
+Rendered SVG is injected via `dangerouslySetInnerHTML={{ __html: svg }}` — safe because Mermaid sanitises its own SVG output.
 
 ## Layout (`page.tsx`)
 
-Split-screen: left half = `ChatPanel`, right half = `DiagramPanel`. Simple CSS is fine — no pixel-perfect styling needed for the assessment.
-
 ```tsx
-<main style={{ display: 'flex', height: '100vh' }}>
-  <div style={{ flex: 1, overflow: 'auto' }}>
-    <ChatPanel messages={messages} onSubmit={handleSubmit} />
-  </div>
-  <div style={{ flex: 1, overflow: 'auto' }}>
-    <DiagramPanel diagram={currentDiagram} />
-  </div>
-</main>
+'use client';
+
+<div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+  <ErrorBoundary>
+    <div style={{ width: '50%' }}>
+      <ChatPanel onDiagram={setCurrentDiagram} />
+    </div>
+  </ErrorBoundary>
+  <ErrorBoundary>
+    <div style={{ width: '50%' }}>
+      <DiagramPanel diagram={currentDiagram} />
+    </div>
+  </ErrorBoundary>
+</div>;
 ```
 
 ## Testing Approach
 
-Use React Testing Library. Mock `api.ts` in tests — do not make real HTTP calls.
+Use React Testing Library. Mock `@/lib/api` and `@/lib/chat-id` in component tests.
 
 ```typescript
 jest.mock('@/lib/api');
+jest.mock('@/lib/chat-id');
 ```
 
-**ChatPanel tests** — cover:
+**api.test.ts** — covers `postChat`: successful request, non-OK status throws, timeout aborts.
 
-- Renders empty message list initially
-- User can type in the input field
-- Submitting calls `onSubmit` with the input value
-- Messages appear in the list after submit
+**ChatPanel.test.tsx** — covers:
 
-**DiagramPanel tests** — cover:
+- User message appears in transcript after submit
+- AI reply appears in transcript on success
+- `onDiagram` called when response type is `'diagram'`
+- Error message shown on network failure
 
-- Renders container element when `diagram` prop is provided
-- Renders placeholder / empty state when `diagram` is null
-- Skip testing Mermaid internals (client-only, hard to test in jsdom)
+**DiagramPanel.test.tsx** — covers:
 
-**page.tsx tests** — cover:
-
-- Renders both panels
-- On submit, calls the api client and updates messages
-- When api returns `type: 'diagram'`, passes diagram to DiagramPanel
-- When api returns `type: 'message'`, updates message list only
+- Placeholder shown when `diagram` is null
+- Mermaid `render()` called when `diagram` is provided
+- Error state shown when Mermaid throws
 
 ## Conventions
 
@@ -145,4 +176,4 @@ jest.mock('@/lib/api');
 - `no-magic-numbers`: avoid raw numbers — use named constants
 - Prettier: printWidth 120, singleQuote, no trailingComma, arrowParens avoid
 - Mark any component that uses browser APIs (`useEffect`, `useRef`, `window`) with `'use client'` at the top
-- Keep `ChatPanel` and `DiagramPanel` as pure presentational components — state lives in `page.tsx`
+- Use stable counter-based IDs for list keys — never array indices

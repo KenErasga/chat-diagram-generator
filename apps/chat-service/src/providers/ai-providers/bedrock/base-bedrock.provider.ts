@@ -3,12 +3,12 @@ import {
   BedrockRuntimeClient,
   ConverseCommand,
   type ConverseResponse,
-  type Message,
+  type Message as BedrockMessage,
   type ToolConfiguration
 } from '@aws-sdk/client-bedrock-runtime';
 import type { ChatResponseDto } from '../../../chat/dto/chat-response.dto';
 import type { IModelProvider } from '../../model-provider.interface';
-import type { Turn } from '../../db-providers/in-memory-db/turn.type';
+import type { Message } from '../../db-providers/in-memory-db/message.type';
 import { getAwsRegion } from '../config';
 
 const MAX_TOKENS = 4096;
@@ -83,10 +83,10 @@ export abstract class BaseBedrockProvider implements IModelProvider {
     });
   }
 
-  async chat(history: Turn[], message: string): Promise<ChatResponseDto> {
+  async chat(history: Message[], message: string): Promise<ChatResponseDto> {
     this.logger.log(`chat called — modelId=${this.modelId}, historyLength=${history.length}`);
 
-    const messages = this.mapHistoryToMessages(history, message);
+    const bedrockMessages = this.mapHistoryToBedrockMessages(history, message);
 
     let response: ConverseResponse;
 
@@ -95,7 +95,7 @@ export abstract class BaseBedrockProvider implements IModelProvider {
         new ConverseCommand({
           modelId: this.modelId,
           system: [{ text: this.systemPrompt }],
-          messages,
+          messages: bedrockMessages,
           toolConfig: CREATE_DIAGRAM_TOOL_CONFIG,
           inferenceConfig: { maxTokens: MAX_TOKENS }
         })
@@ -117,21 +117,21 @@ export abstract class BaseBedrockProvider implements IModelProvider {
     return result;
   }
 
-  private mapHistoryToMessages(history: Turn[], newMessage: string): Message[] {
-    const messages: Message[] = [];
+  private mapHistoryToBedrockMessages(history: Message[], newMessage: string): BedrockMessage[] {
+    const bedrockMessages: BedrockMessage[] = [];
 
     for (let i = 0; i < history.length; i++) {
-      const turn = history[i];
+      const msg = history[i];
 
-      if (turn.role === 'user') {
-        messages.push({ role: 'user', content: [{ text: turn.content }] });
+      if (msg.role === 'user') {
+        bedrockMessages.push({ role: 'user', content: [{ text: msg.content }] });
         continue;
       }
 
-      if (turn.diagram !== undefined) {
+      if (msg.diagram !== undefined) {
         const toolUseId = `tu-${i}`;
 
-        messages.push({
+        bedrockMessages.push({
           role: 'assistant',
           content: [
             {
@@ -139,16 +139,16 @@ export abstract class BaseBedrockProvider implements IModelProvider {
                 toolUseId,
                 name: 'create_diagram',
                 input: {
-                  diagram_type: extractDiagramType(turn.diagram),
-                  mermaid_definition: turn.diagram,
-                  explanation: turn.content
+                  diagram_type: extractDiagramType(msg.diagram),
+                  mermaid_definition: msg.diagram,
+                  explanation: msg.content
                 }
               }
             }
           ]
         });
 
-        messages.push({
+        bedrockMessages.push({
           role: 'user',
           content: [
             {
@@ -164,12 +164,12 @@ export abstract class BaseBedrockProvider implements IModelProvider {
         continue;
       }
 
-      messages.push({ role: 'assistant', content: [{ text: turn.content }] });
+      bedrockMessages.push({ role: 'assistant', content: [{ text: msg.content }] });
     }
 
-    messages.push({ role: 'user', content: [{ text: newMessage }] });
+    bedrockMessages.push({ role: 'user', content: [{ text: newMessage }] });
 
-    return messages;
+    return bedrockMessages;
   }
 
   private parseResponse(response: ConverseResponse): ChatResponseDto {
