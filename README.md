@@ -60,7 +60,7 @@ npm run dev:service
 
 ## Environment Variables (summary)
 
-For full backend configuration, see `[apps/chat-service/README.md](apps/chat-service/README.md)`. The most important variables are:
+For full backend configuration, see [apps/chat-service/README.md](apps/chat-service/README.md). The most important variables are:
 
 | Variable           | Values                                      | Default                | Description                                                                  |
 | ------------------ | ------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------- |
@@ -103,7 +103,7 @@ npm test --workspace=apps/chat-service
 - **`GET /chat`**: list all chat sessions and their histories.
 - **`GET /chat/:chatId`**: fetch the history for a single session.
 
-The backend is stateless aside from an in-memory history map per process. See `[apps/chat-service/README.md](apps/chat-service/README.md)` for full Swagger-style docs and environment details.
+The backend is stateless aside from an in-memory history map per process. See [apps/chat-service/README.md](apps/chat-service/README.md) for full Swagger-style docs and environment details.
 
 ## Frontend UI (chat-app)
 
